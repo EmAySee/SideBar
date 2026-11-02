@@ -1,0 +1,36 @@
+{
+  "ToolbarSettings": {
+    "Height": 44,
+    "Width": 750,
+    "BottomOffset": 12,
+    "CornerRadius": 6,
+    "DisplayMode": "IconsAndText",
+    "IsLocked": false
+  },
+  "LauncherItems": [
+    {
+      "Label": "Terminal",
+      "Icon": "💻",
+      "Executable": "wt.exe",
+      "Arguments": ""
+    },
+    {
+      "Label": "Visual Studio",
+      "Icon": "⚡",
+      "Executable": "C:\\Program Files\\Microsoft Visual Studio\\2026\\Community\\Common7\\IDE\\devenv.exe",
+      "Arguments": ""
+    },
+    {
+      "Label": "Workspace",
+      "Icon": "📁",
+      "Executable": "explorer.exe",
+      "Arguments": "C:\\ai"
+    },
+    {
+      "Label": "Process Monitor",
+      "Icon": "📊",
+      "Executable": "taskmgr.exe",
+      "Arguments": ""
+    }
+  ]
+}
