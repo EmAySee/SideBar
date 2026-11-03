@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
+using Microsoft.Win32;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Windows;
@@ -11,6 +12,9 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media.Imaging;
 using WinForms = System.Windows.Forms;
+using WpfDragEventArgs = System.Windows.DragEventArgs;
+using WpfMouseEventArgs = System.Windows.Input.MouseEventArgs;
+using WpfPoint = System.Windows.Point;
 
 namespace DesktopToolbar
 {
@@ -212,12 +216,18 @@ namespace DesktopToolbar
         private string _configPath;
         private WinForms.NotifyIcon? _trayIcon;
         private WinForms.ToolStripMenuItem? _trayTopmostItem;
+        private WinForms.ToolStripMenuItem? _trayArrangeItem;
+        private bool _isArrangeMode;
+        private LauncherItem? _draggedLauncher;
+        private WpfPoint _dragStartPoint;
 
         public Visibility TextVisibility => _config.ToolbarSettings.DisplayMode == "IconsOnly" ? Visibility.Collapsed : Visibility.Visible;
 
         public MainWindow()
         {
             InitializeComponent();
+            ApplyWindowsTheme();
+            SystemEvents.UserPreferenceChanged += SystemEvents_UserPreferenceChanged;
             Icon = CreateApplicationIcon();
 
             string appDataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "SideBar");
@@ -228,6 +238,54 @@ namespace DesktopToolbar
             PositionAtBottom();
             SetupSystemTray();
             this.DataContext = this;
+        }
+
+        private void ApplyWindowsTheme()
+        {
+            bool isLightTheme = true;
+            try
+            {
+                using RegistryKey? personalizeKey = Registry.CurrentUser.OpenSubKey(
+                    @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize");
+                object? themeValue = personalizeKey?.GetValue("SystemUsesLightTheme") ??
+                                     personalizeKey?.GetValue("AppsUseLightTheme");
+                if (themeValue != null)
+                {
+                    isLightTheme = Convert.ToInt32(themeValue) != 0;
+                }
+            }
+            catch
+            {
+                isLightTheme = false;
+            }
+
+            UpdateBrushColor("ToolbarBg", isLightTheme ? "F3F3F3" : "202020");
+            UpdateBrushColor("ToolbarBorder", isLightTheme ? "D1D1D1" : "454545");
+            UpdateBrushColor("ToolbarAccent", isLightTheme ? "0078D4" : "60CDFF");
+            UpdateBrushColor("ToolbarText", isLightTheme ? "1A1A1A" : "F3F3F3");
+            UpdateBrushColor("ButtonBg", isLightTheme ? "E9E9E9" : "2B2B2B");
+            UpdateBrushColor("ButtonHover", isLightTheme ? "DADADA" : "3A3A3A");
+        }
+
+        private void UpdateBrushColor(string resourceKey, string hexColor)
+        {
+            if (Resources.Contains(resourceKey))
+            {
+                System.Windows.Media.Color color = (System.Windows.Media.Color)
+                    System.Windows.Media.ColorConverter.ConvertFromString("#" + hexColor);
+
+                // Resource brushes may be frozen/shared by WPF and therefore cannot be
+                // modified. Replace the resource instead of changing it in place.
+                Resources[resourceKey] = new System.Windows.Media.SolidColorBrush(color);
+            }
+        }
+
+        private void SystemEvents_UserPreferenceChanged(object? sender, UserPreferenceChangedEventArgs e)
+        {
+            if (e.Category == UserPreferenceCategory.General)
+            {
+                Dispatcher.BeginInvoke(ApplyWindowsTheme);
+            }
         }
 
         private void SetupSystemTray()
@@ -248,6 +306,12 @@ namespace DesktopToolbar
             };
             trayMenu.Items.Add(_trayTopmostItem);
 
+            _trayArrangeItem = new WinForms.ToolStripMenuItem("Arrange Icons", null, (s, e) => ToggleArrangeMode())
+            {
+                CheckOnClick = true
+            };
+            trayMenu.Items.Add(_trayArrangeItem);
+
             trayMenu.Items.Add(new WinForms.ToolStripSeparator());
             trayMenu.Items.Add("Reload Config", null, (s, e) => LoadConfiguration());
             trayMenu.Items.Add("Open Settings File", null, (s, e) => OpenConfigFile());
@@ -256,6 +320,13 @@ namespace DesktopToolbar
 
             _trayIcon.ContextMenuStrip = trayMenu;
             _trayIcon.DoubleClick += (s, e) => LoadConfiguration();
+        }
+
+        private void ToggleArrangeMode()
+        {
+            _isArrangeMode = _trayArrangeItem?.Checked == true;
+            _draggedLauncher = null;
+            Cursor = _isArrangeMode ? System.Windows.Input.Cursors.SizeAll : System.Windows.Input.Cursors.Arrow;
         }
 
         private void ToggleAlwaysOnTop()
@@ -419,6 +490,7 @@ namespace DesktopToolbar
 
         protected override void OnClosed(EventArgs e)
         {
+            SystemEvents.UserPreferenceChanged -= SystemEvents_UserPreferenceChanged;
             if (_trayIcon != null)
             {
                 _trayIcon.Visible = false;
@@ -459,7 +531,7 @@ namespace DesktopToolbar
             DropHint.Visibility = Visibility.Collapsed;
         }
 
-        private void Toolbar_Drop(object sender, System.Windows.DragEventArgs e)
+        private void Toolbar_Drop(object sender, WpfDragEventArgs e)
         {
             DropHint.Visibility = Visibility.Collapsed;
 
@@ -511,6 +583,11 @@ namespace DesktopToolbar
 
         private void LauncherButton_Click(object sender, RoutedEventArgs e)
         {
+            if (_isArrangeMode)
+            {
+                return;
+            }
+
             if (sender is FrameworkElement fe && fe.DataContext is LauncherItem item)
             {
                 if (!string.IsNullOrWhiteSpace(item.Executable))
@@ -529,6 +606,83 @@ namespace DesktopToolbar
                         System.Windows.MessageBox.Show(this, $"Failed to launch {item.Label}: {ex.Message}", "Launch Error", MessageBoxButton.OK, MessageBoxImage.Error);
                     }
                 }
+            }
+        }
+
+        private void LauncherButton_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (!_isArrangeMode || sender is not FrameworkElement element || element.DataContext is not LauncherItem item)
+            {
+                return;
+            }
+
+            _draggedLauncher = item;
+            _dragStartPoint = e.GetPosition(null);
+        }
+
+        private void LauncherButton_PreviewMouseMove(object sender, WpfMouseEventArgs e)
+        {
+            if (!_isArrangeMode || e.LeftButton != MouseButtonState.Pressed ||
+                _draggedLauncher == null)
+            {
+                return;
+            }
+
+            System.Windows.Point currentPoint = e.GetPosition(null);
+            Vector movement = currentPoint - _dragStartPoint;
+            if (Math.Abs(movement.X) < SystemParameters.MinimumHorizontalDragDistance &&
+                Math.Abs(movement.Y) < SystemParameters.MinimumVerticalDragDistance)
+            {
+                return;
+            }
+
+            System.Windows.DataObject data = new(typeof(LauncherItem), _draggedLauncher);
+            DragDrop.DoDragDrop((DependencyObject)sender, data, System.Windows.DragDropEffects.Move);
+            _draggedLauncher = null;
+        }
+
+        private void LauncherButton_Drop(object sender, WpfDragEventArgs e)
+        {
+            if (!_isArrangeMode || _draggedLauncher == null ||
+                sender is not FrameworkElement element || element.DataContext is not LauncherItem target ||
+                ReferenceEquals(_draggedLauncher, target))
+            {
+                return;
+            }
+
+            int oldIndex = _config.LauncherItems.IndexOf(_draggedLauncher);
+            int newIndex = _config.LauncherItems.IndexOf(target);
+            if (oldIndex < 0 || newIndex < 0)
+            {
+                return;
+            }
+
+            _config.LauncherItems.RemoveAt(oldIndex);
+            if (oldIndex < newIndex)
+            {
+                newIndex--;
+            }
+            _config.LauncherItems.Insert(newIndex, _draggedLauncher);
+            _draggedLauncher = null;
+
+            SaveConfiguration();
+            LauncherItemsControl.ItemsSource = null;
+            LauncherItemsControl.ItemsSource = _config.LauncherItems;
+            e.Handled = true;
+        }
+
+        private void LauncherButton_DragOver(object sender, WpfDragEventArgs e)
+        {
+            if (_isArrangeMode &&
+                _draggedLauncher != null &&
+                e.Data.GetDataPresent(typeof(LauncherItem)))
+            {
+                e.Effects = System.Windows.DragDropEffects.Move;
+                e.Handled = true;
+            }
+            else
+            {
+                e.Effects = System.Windows.DragDropEffects.None;
             }
         }
 
