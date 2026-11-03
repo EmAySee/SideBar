@@ -8,7 +8,7 @@ A lightweight, focus-immune custom WPF toolbar application designed to replace h
 - **Clean Iconography:** Tailored custom visual themes and branding for core systems and remote connections.
 - **Taskbar De-clutterer:** Centralizes frequent app launching into a minimalist, persistent panel.
 
----
+--- 
 
 ## Getting Started
 

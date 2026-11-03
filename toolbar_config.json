@@ -4,33 +4,64 @@
     "Width": 750,
     "BottomOffset": 12,
     "CornerRadius": 6,
-    "DisplayMode": "IconsAndText",
-    "IsLocked": false
+    "DisplayMode": "IconsOnly",
+    "IsLocked": false,
+    "AlwaysOnTop": true
   },
   "LauncherItems": [
     {
-      "Label": "Terminal",
-      "Icon": "💻",
-      "Executable": "wt.exe",
-      "Arguments": ""
+      "Label": "ComfyFrontEnd",
+      "Executable": "B:\\My Program Files\\ComfyFrontEnd\\ComfyFrontEnd.exe",
+      "Arguments": "",
+      "IconPath": "B:\\My Program Files\\ComfyFrontEnd\\AdventureApp_Render_20261101_203806.png"
     },
     {
-      "Label": "Visual Studio",
-      "Icon": "⚡",
-      "Executable": "C:\\Program Files\\Microsoft Visual Studio\\2026\\Community\\Common7\\IDE\\devenv.exe",
-      "Arguments": ""
+      "Label": "Banshee RDP",
+      "Executable": "mstsc",
+      "Arguments": " /v:banshee",
+      "IconPath": "C:\\Users\\macma\\AppData\\Roaming\\SideBar\\icons\\banshee_mstsc.png"
     },
     {
-      "Label": "Workspace",
-      "Icon": "📁",
-      "Executable": "explorer.exe",
-      "Arguments": "C:\\ai"
+      "Label": "Phantom RDP",
+      "Executable": "mstsc",
+      "Arguments": " /v:phantom",
+      "IconPath": "C:\\Users\\macma\\AppData\\Roaming\\SideBar\\icons\\phantom_Mstsc.png"
     },
     {
-      "Label": "Process Monitor",
-      "Icon": "📊",
-      "Executable": "taskmgr.exe",
-      "Arguments": ""
+      "Label": "Spectre RDP",
+      "Executable": "mstsc",
+      "Arguments": " /v:spectre",
+      "IconPath": "C:\\Users\\macma\\AppData\\Roaming\\SideBar\\icons\\spectre_Mstsc.png"
+    },
+    {
+      "Label": "Phantom ssh",
+      "Executable": "ssh",
+      "Arguments": " mac@phantom",
+      "IconPath": "C:\\Users\\macma\\AppData\\Roaming\\SideBar\\icons\\phantom.png"
+    },
+    {
+      "Label": "Spectre SSH",
+      "Executable": "ssh",
+      "Arguments": "mac@spectre",
+      "IconPath": "C:\\Users\\macma\\AppData\\Roaming\\SideBar\\icons\\spectre.png"
+    },
+    {
+      "Label": "Photoshop",
+      "Executable": "C:\\Program Files\\Adobe\\Adobe Photoshop (Beta)\\Photoshop.exe",
+      "Arguments": "",
+      "IconPath": ""
+    },
+    {
+      "Label": "ACDSeeUltimate2026",
+      "Executable": "C:\\Program Files\\ACD Systems\\ACDSee Ultimate\\19.0\\ACDSeeUltimate2026.exe",
+      "Arguments": "",
+      "IconPath": ""
+    },
+    {
+      "Label": "Visual Studio 2026",
+      "Executable": "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\Common7\\IDE\\devenv.exe",
+      "Arguments": "",
+      "IconPath": ""
     }
   ]
 }
