@@ -9,16 +9,21 @@
         Loaded="Window_Loaded">
 
     <Window.Resources>
-        <SolidColorBrush x:Key="ToolbarBg" Color="#1E1E1E" Opacity="0.88"/>
-        <SolidColorBrush x:Key="ToolbarBorder" Color="#333333"/>
-        <SolidColorBrush x:Key="ToolbarText" Color="#E0E0E0"/>
-        <SolidColorBrush x:Key="ButtonBg" Color="#2A2A2A"/>
-        <SolidColorBrush x:Key="ButtonHover" Color="#3C3C3C"/>
+        <SolidColorBrush x:Key="ToolbarBg" Color="#202020" Opacity="0.96"/>
+        <SolidColorBrush x:Key="ToolbarBorder" Color="#454545"/>
+        <SolidColorBrush x:Key="ToolbarAccent" Color="#60CDFF"/>
+        <SolidColorBrush x:Key="ToolbarText" Color="#F3F3F3"/>
+        <SolidColorBrush x:Key="ButtonBg" Color="#2B2B2B"/>
+        <SolidColorBrush x:Key="ButtonHover" Color="#3A3A3A"/>
     </Window.Resources>
 
-    <Border Background="{StaticResource ToolbarBg}" 
+        <Border Background="{StaticResource ToolbarBg}" 
             BorderBrush="{StaticResource ToolbarBorder}" 
-            BorderThickness="1" CornerRadius="10" Padding="14,12"
+            BorderThickness="1" CornerRadius="8" Padding="10,8"
+            AllowDrop="True"
+            DragOver="Toolbar_DragOver"
+            DragLeave="Toolbar_DragLeave"
+            Drop="Toolbar_Drop"
             MouseLeftButtonDown="Border_MouseLeftButtonDown">
 
         <!-- Toolbar Context Menu -->
@@ -99,6 +104,14 @@
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
+
+            <Border Grid.ColumnSpan="3" Height="2" Background="{StaticResource ToolbarAccent}"
+                    VerticalAlignment="Bottom" Margin="4,0,4,-8" CornerRadius="1"/>
+
+            <TextBlock x:Name="DropHint" Grid.ColumnSpan="3" Text="Drop apps here to create launchers"
+                       Foreground="{StaticResource ToolbarText}" Opacity="0.75" FontSize="13"
+                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                       Visibility="Collapsed" IsHitTestVisible="False"/>
 
             <!-- Status Indicator -->
             <StackPanel Orientation="Horizontal" Grid.Column="2" VerticalAlignment="Center" Margin="16,0,6,0">

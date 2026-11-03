@@ -33,10 +33,26 @@ namespace DesktopToolbar
 
     public class LauncherItem
     {
+        public const string Shell32IconPrefix = "Shell32:";
+
+        public static readonly IReadOnlyDictionary<string, int> BuiltInIconIndexes = new Dictionary<string, int>
+        {
+            ["Application"] = 2,
+            ["Folder"] = 3,
+            ["Folder Open"] = 4,
+            ["Computer"] = 15,
+            ["Search"] = 22,
+            ["Network"] = 17,
+            ["Control Panel"] = 21,
+            ["Document"] = 1,
+            ["Warning"] = 78
+        };
+
         public string Label { get; set; } = "";
         public string Executable { get; set; } = "";
         public string Arguments { get; set; } = "";
         public string IconPath { get; set; } = "";
+        public string BuiltInIcon { get; set; } = "";
 
         private System.Windows.Media.ImageSource? _cachedIcon;
         private bool _iconResolved = false;
@@ -93,6 +109,11 @@ namespace DesktopToolbar
                     }
                 }
 
+                if (TryGetShell32Index(BuiltInIcon, out int shell32Index))
+                {
+                    return GetShell32Icon(shell32Index);
+                }
+
                 // 2. Fall back to extracting icon from executable using Shell32 for reliability
                 if (!string.IsNullOrWhiteSpace(Executable) && File.Exists(Executable))
                 {
@@ -113,6 +134,60 @@ namespace DesktopToolbar
             catch { }
             return null;
         }
+
+        public static bool TryGetShell32Index(string? value, out int index)
+        {
+            index = -1;
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return false;
+            }
+
+            if (value.StartsWith(Shell32IconPrefix, StringComparison.OrdinalIgnoreCase) &&
+                int.TryParse(value[Shell32IconPrefix.Length..], out index) && index >= 0)
+            {
+                return true;
+            }
+
+            return BuiltInIconIndexes.TryGetValue(value, out index);
+        }
+
+        public static System.Windows.Media.ImageSource? GetShell32Icon(int index)
+        {
+            try
+            {
+                string shellPath = Path.Combine(Environment.SystemDirectory, "shell32.dll");
+                IntPtr[] largeIcons = new IntPtr[1];
+                if (ExtractIconEx(shellPath, index, largeIcons, null, 1) == 0 || largeIcons[0] == IntPtr.Zero)
+                {
+                    return null;
+                }
+
+                try
+                {
+                    var bmpSource = Imaging.CreateBitmapSourceFromHIcon(
+                        largeIcons[0],
+                        Int32Rect.Empty,
+                        BitmapSizeOptions.FromWidthAndHeight(56, 56));
+                    bmpSource.Freeze();
+                    return bmpSource;
+                }
+                finally
+                {
+                    DestroyIcon(largeIcons[0]);
+                }
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+        private static extern uint ExtractIconEx(string szFileName, int nIconIndex, IntPtr[]? phiconLarge, IntPtr[]? phiconSmall, uint nIcons);
+
+        [DllImport("user32.dll")]
+        private static extern bool DestroyIcon(IntPtr hIcon);
     }
 
     public partial class MainWindow : Window
@@ -143,6 +218,7 @@ namespace DesktopToolbar
         public MainWindow()
         {
             InitializeComponent();
+            Icon = CreateApplicationIcon();
 
             string appDataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "SideBar");
             Directory.CreateDirectory(appDataDir);
@@ -190,6 +266,17 @@ namespace DesktopToolbar
                 this.Topmost = _config.ToolbarSettings.AlwaysOnTop;
                 SaveConfiguration();
             }
+        }
+
+        private System.Windows.Media.ImageSource CreateApplicationIcon()
+        {
+            using var icon = CreateDynamicTrayIcon();
+            var image = Imaging.CreateBitmapSourceFromHIcon(
+                icon.Handle,
+                Int32Rect.Empty,
+                BitmapSizeOptions.FromWidthAndHeight(32, 32));
+            image.Freeze();
+            return image;
         }
 
         private System.Drawing.Icon CreateDynamicTrayIcon()
@@ -352,6 +439,76 @@ namespace DesktopToolbar
             }
         }
 
+        private void Toolbar_DragOver(object sender, System.Windows.DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent(System.Windows.DataFormats.FileDrop))
+            {
+                e.Effects = System.Windows.DragDropEffects.Copy;
+                DropHint.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                e.Effects = System.Windows.DragDropEffects.None;
+            }
+
+            e.Handled = true;
+        }
+
+        private void Toolbar_DragLeave(object sender, System.Windows.DragEventArgs e)
+        {
+            DropHint.Visibility = Visibility.Collapsed;
+        }
+
+        private void Toolbar_Drop(object sender, System.Windows.DragEventArgs e)
+        {
+            DropHint.Visibility = Visibility.Collapsed;
+
+            if (!e.Data.GetDataPresent(System.Windows.DataFormats.FileDrop) || e.Data.GetData(System.Windows.DataFormats.FileDrop) is not string[] paths)
+            {
+                return;
+            }
+
+            int addedCount = 0;
+            foreach (string path in paths)
+            {
+                if (!File.Exists(path) && !Directory.Exists(path))
+                {
+                    continue;
+                }
+
+                string fullPath = Path.GetFullPath(path);
+                bool alreadyPinned = _config.LauncherItems.Exists(item =>
+                    string.Equals(item.Executable, fullPath, StringComparison.OrdinalIgnoreCase));
+                if (alreadyPinned)
+                {
+                    continue;
+                }
+
+                string label = Directory.Exists(fullPath)
+                    ? new DirectoryInfo(fullPath).Name
+                    : Path.GetFileNameWithoutExtension(fullPath);
+                if (string.IsNullOrWhiteSpace(label))
+                {
+                    label = Path.GetFileName(fullPath);
+                }
+
+                _config.LauncherItems.Add(new LauncherItem
+                {
+                    Label = label,
+                    Executable = fullPath
+                });
+                addedCount++;
+            }
+
+            if (addedCount > 0)
+            {
+                SaveConfiguration();
+                LoadConfiguration();
+            }
+
+            e.Handled = true;
+        }
+
         private void LauncherButton_Click(object sender, RoutedEventArgs e)
         {
             if (sender is FrameworkElement fe && fe.DataContext is LauncherItem item)
@@ -470,9 +627,13 @@ namespace DesktopToolbar
             {
                 Title = title,
                 Width = 450,
-                Height = 330,
-                WindowStartupLocation = WindowStartupLocation.CenterScreen,
-                ResizeMode = ResizeMode.NoResize
+                Height = 500,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                ResizeMode = ResizeMode.NoResize,
+                Owner = this,
+                Topmost = this.Topmost,
+                ShowInTaskbar = false,
+                Icon = this.Icon
             };
 
             StackPanel panel = new StackPanel { Margin = new Thickness(15) };
@@ -532,6 +693,51 @@ namespace DesktopToolbar
             iconGrid.Children.Add(btnBrowseIcon);
             panel.Children.Add(iconGrid);
 
+            panel.Children.Add(new System.Windows.Controls.TextBlock { Text = "Built-in Icon:", Margin = new Thickness(0, 10, 0, 4) });
+            var iconChoices = new List<KeyValuePair<string, string>>
+            {
+                new("Use application icon", "")
+            };
+            foreach (string iconName in LauncherItem.BuiltInIconIndexes.Keys)
+            {
+                iconChoices.Add(new KeyValuePair<string, string>(iconName, iconName));
+            }
+
+            string selectedBuiltInIcon = item.BuiltInIcon;
+
+            System.Windows.Controls.ComboBox cmbBuiltInIcon = new System.Windows.Controls.ComboBox
+            {
+                ItemsSource = iconChoices,
+                DisplayMemberPath = "Key",
+                SelectedValuePath = "Value",
+                SelectedValue = LauncherItem.BuiltInIconIndexes.ContainsKey(item.BuiltInIcon) ? item.BuiltInIcon : "",
+                Margin = new Thickness(0, 0, 0, 4)
+            };
+            cmbBuiltInIcon.SelectionChanged += (s, ev) =>
+            {
+                selectedBuiltInIcon = cmbBuiltInIcon.SelectedValue?.ToString() ?? "";
+                txtIcon.Text = "";
+            };
+            panel.Children.Add(cmbBuiltInIcon);
+
+            System.Windows.Controls.Button btnChooseShellIcon = new System.Windows.Controls.Button
+            {
+                Content = "Choose an icon from shell32.dll...",
+                HorizontalAlignment = System.Windows.HorizontalAlignment.Left,
+                Margin = new Thickness(0, 4, 0, 0)
+            };
+            btnChooseShellIcon.Click += (s, ev) =>
+            {
+                string? chosenIcon = ShowShell32IconPicker();
+                if (chosenIcon != null)
+                {
+                    cmbBuiltInIcon.SelectedValue = LauncherItem.BuiltInIconIndexes.ContainsKey(chosenIcon) ? chosenIcon : "";
+                    selectedBuiltInIcon = chosenIcon;
+                    txtIcon.Text = "";
+                }
+            };
+            panel.Children.Add(btnChooseShellIcon);
+
             // Arguments Input
             panel.Children.Add(new System.Windows.Controls.TextBlock { Text = "Arguments:", Margin = new Thickness(0, 10, 0, 4) });
             System.Windows.Controls.TextBox txtArgs = new System.Windows.Controls.TextBox { Text = item.Arguments, Margin = new Thickness(0, 0, 0, 14) };
@@ -548,6 +754,7 @@ namespace DesktopToolbar
                 item.Label = txtLabel.Text;
                 item.Executable = txtExec.Text;
                 item.IconPath = txtIcon.Text;
+                item.BuiltInIcon = selectedBuiltInIcon;
                 item.Arguments = txtArgs.Text;
                 dialogResult = true;
                 dialog.Close();
@@ -557,10 +764,86 @@ namespace DesktopToolbar
             btnPanel.Children.Add(btnCancel);
             panel.Children.Add(btnPanel);
 
-            dialog.Content = panel;
+            dialog.Content = new System.Windows.Controls.ScrollViewer
+            {
+                Content = panel,
+                VerticalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Auto,
+                HorizontalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Disabled
+            };
             dialog.ShowDialog();
 
             return dialogResult;
+        }
+
+        private string? ShowShell32IconPicker()
+        {
+            Window picker = new Window
+            {
+                Title = "Choose an icon from shell32.dll",
+                Width = 620,
+                Height = 470,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                Owner = this,
+                ResizeMode = ResizeMode.CanResize,
+                Topmost = this.Topmost,
+                ShowInTaskbar = false,
+                Icon = this.Icon
+            };
+
+            string? selectedIcon = null;
+            var iconPanel = new System.Windows.Controls.WrapPanel { Margin = new Thickness(10) };
+            var scrollViewer = new System.Windows.Controls.ScrollViewer
+            {
+                Content = iconPanel,
+                VerticalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Auto,
+                HorizontalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Disabled
+            };
+
+            for (int index = 0; index < 256; index++)
+            {
+                var icon = LauncherItem.GetShell32Icon(index);
+                if (icon == null)
+                {
+                    continue;
+                }
+
+                int selectedIndex = index;
+                var iconButton = new System.Windows.Controls.Button
+                {
+                    Width = 82,
+                    Height = 78,
+                    Margin = new Thickness(3),
+                    Padding = new Thickness(3),
+                    ToolTip = $"shell32.dll, index {index}"
+                };
+                var buttonContent = new System.Windows.Controls.StackPanel
+                {
+                    HorizontalAlignment = System.Windows.HorizontalAlignment.Center
+                };
+                buttonContent.Children.Add(new System.Windows.Controls.Image
+                {
+                    Source = icon,
+                    Width = 36,
+                    Height = 36,
+                    Margin = new Thickness(0, 2, 0, 2)
+                });
+                buttonContent.Children.Add(new System.Windows.Controls.TextBlock
+                {
+                    Text = $"#{index}",
+                    HorizontalAlignment = System.Windows.HorizontalAlignment.Center
+                });
+                iconButton.Content = buttonContent;
+                iconButton.Click += (s, ev) =>
+                {
+                    selectedIcon = LauncherItem.Shell32IconPrefix + selectedIndex;
+                    picker.Close();
+                };
+                iconPanel.Children.Add(iconButton);
+            }
+
+            picker.Content = scrollViewer;
+            picker.ShowDialog();
+            return selectedIcon;
         }
     }
 }
