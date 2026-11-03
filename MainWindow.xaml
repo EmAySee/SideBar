@@ -53,7 +53,7 @@
             <!-- Drag Handle / App Indicator -->
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Grid.Column="0" Margin="6,0,16,0">
                 <TextBlock x:Name="DragHandleIcon" Text="⠿" FontSize="18" Foreground="{StaticResource ToolbarText}" Opacity="0.5" VerticalAlignment="Center" Margin="0,0,8,0" Cursor="SizeAll"/>
-                <TextBlock Text="Launchpad" FontWeight="Medium" FontSize="14" Foreground="{StaticResource ToolbarText}" VerticalAlignment="Center"/>
+                <TextBlock Text="LP" FontWeight="Medium" FontSize="14" Foreground="{StaticResource ToolbarText}" VerticalAlignment="Center"/>
             </StackPanel>
 
             <!-- Dynamic App Buttons Repeater -->
@@ -113,11 +113,7 @@
                        HorizontalAlignment="Center" VerticalAlignment="Center"
                        Visibility="Collapsed" IsHitTestVisible="False"/>
 
-            <!-- Status Indicator -->
-            <StackPanel Orientation="Horizontal" Grid.Column="2" VerticalAlignment="Center" Margin="16,0,6,0">
-                <Ellipse Width="9" Height="9" Fill="#4CAF50" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                <TextBlock Text="Ready" Foreground="{StaticResource ToolbarText}" FontSize="13" Opacity="0.6" VerticalAlignment="Center"/>
-            </StackPanel>
+
         </Grid>
     </Border>
 </Window>
