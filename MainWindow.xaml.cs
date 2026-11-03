@@ -38,8 +38,28 @@ namespace DesktopToolbar
         public string Arguments { get; set; } = "";
         public string IconPath { get; set; } = "";
 
+        private System.Windows.Media.ImageSource? _cachedIcon;
+        private bool _iconResolved = false;
+
         [System.Text.Json.Serialization.JsonIgnore]
-        public System.Windows.Media.ImageSource? AppIcon => ResolveAppIcon();
+        public System.Windows.Media.ImageSource? AppIcon
+        {
+            get
+            {
+                if (!_iconResolved)
+                {
+                    _cachedIcon = ResolveAppIcon();
+                    _iconResolved = true;
+                }
+                return _cachedIcon;
+            }
+        }
+
+        public void ClearIconCache()
+        {
+            _cachedIcon = null;
+            _iconResolved = false;
+        }
 
         private System.Windows.Media.ImageSource? ResolveAppIcon()
         {
@@ -49,22 +69,26 @@ namespace DesktopToolbar
                 if (!string.IsNullOrWhiteSpace(IconPath) && File.Exists(IconPath))
                 {
                     if (IconPath.EndsWith(".ico", StringComparison.OrdinalIgnoreCase))
-                    {
+                    { 
                         using (var icon = new System.Drawing.Icon(IconPath))
                         {
-                            return Imaging.CreateBitmapSourceFromHIcon(
+                            var bmpSource = Imaging.CreateBitmapSourceFromHIcon(
                                 icon.Handle,
                                 Int32Rect.Empty,
-                                BitmapSizeOptions.FromEmptyOptions());
+                                BitmapSizeOptions.FromWidthAndHeight(56, 56));
+                            bmpSource.Freeze();
+                            return bmpSource;
                         }
                     }
                     else
                     {
                         var bitmap = new BitmapImage();
                         bitmap.BeginInit();
-                        bitmap.UriSource = new Uri(IconPath);
+                        bitmap.UriSource = new Uri(IconPath, UriKind.Absolute);
+                        bitmap.DecodePixelWidth = 56; // 28px * 2 for high-DPI crispness
                         bitmap.CacheOption = BitmapCacheOption.OnLoad;
                         bitmap.EndInit();
+                        bitmap.Freeze(); // Crucial for memory management
                         return bitmap;
                     }
                 }
@@ -76,10 +100,12 @@ namespace DesktopToolbar
                     {
                         if (icon != null)
                         {
-                            return Imaging.CreateBitmapSourceFromHIcon(
+                            var bmpSource = Imaging.CreateBitmapSourceFromHIcon(
                                 icon.Handle,
                                 Int32Rect.Empty,
-                                BitmapSizeOptions.FromEmptyOptions());
+                                BitmapSizeOptions.FromWidthAndHeight(56, 56));
+                            bmpSource.Freeze();
+                            return bmpSource;
                         }
                     }
                 }
@@ -102,6 +128,10 @@ namespace DesktopToolbar
 
         [DllImport("user32.dll")]
         private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool DestroyIcon(IntPtr hIcon);
 
         private ToolbarConfig _config = new();
         private string _configPath;
@@ -184,7 +214,16 @@ namespace DesktopToolbar
                         }
                     }
                 }
-                return System.Drawing.Icon.FromHandle(bitmap.GetHicon());
+                IntPtr hIcon = bitmap.GetHicon();
+                try
+                {
+                    using var sourceIcon = System.Drawing.Icon.FromHandle(hIcon);
+                    return (System.Drawing.Icon)sourceIcon.Clone();
+                }
+                finally
+                {
+                    DestroyIcon(hIcon);
+                }
             }
         }
 
@@ -208,6 +247,12 @@ namespace DesktopToolbar
             catch
             {
                 _config = new ToolbarConfig();
+            }
+
+            // Clear icon caches upon reload so updated icons reflect properly
+            foreach (var item in _config.LauncherItems)
+            {
+                item.ClearIconCache();
             }
 
             this.Height = _config.ToolbarSettings.Height;
@@ -399,6 +444,7 @@ namespace DesktopToolbar
             {
                 if (PromptEditLauncher("Edit Launcher", item))
                 {
+                    item.ClearIconCache(); // Re-resolve icon if path changed
                     SaveConfiguration();
                     LoadConfiguration();
                 }
