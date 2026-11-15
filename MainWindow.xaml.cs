@@ -35,6 +35,7 @@ namespace DesktopToolbar
         public string DisplayMode { get; set; } = "IconsAndText";
         public bool IsLocked { get; set; } = false;
         public bool AlwaysOnTop { get; set; } = true;
+        public bool AutoHideEnabled { get; set; } = true;
         public string TitleText { get; set; } = "LP:";
         public bool ShowTitle { get; set; } = true;
     }
@@ -200,10 +201,15 @@ namespace DesktopToolbar
     {
         private bool _isAutoHideEnabled = true;
         private bool _isExpanded = true;
+        private bool _isSnappedToTop = true;
+        private bool _isDraggingWindow;
         private DispatcherTimer? _hoverCheckTimer;
         private DispatcherTimer? _hideDelayTimer;
         private double _dockedTop;
         private double _expandedTop;
+        private const double RevealTabWidth = 30;
+        private const double RevealTabHeight = 8;
+        private const double TopSnapThreshold = 24;
 
         private const int GWL_EXSTYLE = -20;
         private const int WS_EX_TOOLWINDOW = 0x00000080;
@@ -264,16 +270,16 @@ namespace DesktopToolbar
             _hoverCheckTimer.Tick += (s, e) => CheckMouseProximity();
             _hoverCheckTimer.Start();
 
-            // 2-second delay timer before hiding
+            // Half-second delay timer before hiding
             _hideDelayTimer = new DispatcherTimer
             {
-                Interval = TimeSpan.FromSeconds(2)
+                Interval = TimeSpan.FromMilliseconds(500)
             };
             _hideDelayTimer.Tick += (s, e) =>
             {
                 _hideDelayTimer.Stop();
-                var mousePos = WinForms.Cursor.Position;
-                if (mousePos.Y > 6 && !this.IsMouseOver && !this.IsActive)
+                if (_isAutoHideEnabled && _isSnappedToTop && !_isDraggingWindow &&
+                    !IsCursorInRevealZone() && !this.IsMouseOver)
                 {
                     SlideWindow(false);
                 }
@@ -282,49 +288,72 @@ namespace DesktopToolbar
 
         private void CheckMouseProximity()
         {
-            if (!_isAutoHideEnabled || _isArrangeMode) return;
+            if (!_isAutoHideEnabled || !_isSnappedToTop || _isArrangeMode || _isDraggingWindow) return;
 
-            var mousePos = WinForms.Cursor.Position;
-
-            // Trigger zone: absolute top of the screen (Y <= 4)
-            bool isNearEdge = mousePos.Y <= 4;
+            bool isInRevealZone = !_isExpanded && IsCursorInRevealZone();
             bool isOverWindow = this.IsMouseOver;
 
-            if ((isNearEdge || isOverWindow) && !_isExpanded)
+            if ((isInRevealZone || isOverWindow) && !_isExpanded)
             {
                 _hideDelayTimer?.Stop();
-                SlideWindow(true); // Expand down into view
+                SlideWindow(true);
             }
-            else if (!isNearEdge && !isOverWindow && _isExpanded)
+            else if (!isOverWindow && _isExpanded)
             {
-                if (this.IsActive) return;
-
                 if (_hideDelayTimer != null && !_hideDelayTimer.IsEnabled)
                 {
-                    _hideDelayTimer.Start(); // Start 2-second countdown to hide
+                    _hideDelayTimer.Start();
                 }
             }
-            else if (isNearEdge || isOverWindow)
+            else if (isInRevealZone || isOverWindow)
             {
-                _hideDelayTimer?.Stop(); // Cancel hide if mouse comes back
+                _hideDelayTimer?.Stop();
             }
+        }
+
+        private bool IsCursorInRevealZone()
+        {
+            if (!_isSnappedToTop || _isExpanded)
+            {
+                return false;
+            }
+
+            var mousePosition = WinForms.Cursor.Position;
+            WpfPoint localPosition = PointFromScreen(new WpfPoint(mousePosition.X, mousePosition.Y));
+            double tabLeft = (ActualWidth - RevealTabWidth) / 2;
+
+            return localPosition.X >= tabLeft &&
+                   localPosition.X <= tabLeft + RevealTabWidth &&
+                   localPosition.Y >= ActualHeight - RevealTabHeight &&
+                   localPosition.Y <= ActualHeight;
         }
 
         private void SlideWindow(bool expand)
         {
-            if (_isExpanded == expand) return;
+            if (_isExpanded == expand || (!expand && !_isSnappedToTop)) return;
             _isExpanded = expand;
+            RevealTab.Visibility = expand ? Visibility.Collapsed : Visibility.Visible;
+            ToolbarSurface.IsHitTestVisible = expand;
 
             double targetTop = expand ? _expandedTop : _dockedTop;
+            TimeSpan duration = TimeSpan.FromMilliseconds(200);
 
             DoubleAnimation animation = new DoubleAnimation
             {
                 To = targetTop,
-                Duration = TimeSpan.FromMilliseconds(200),
+                Duration = duration,
+                EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
+            };
+
+            DoubleAnimation surfaceAnimation = new DoubleAnimation
+            {
+                To = expand ? 1 : 0,
+                Duration = duration,
                 EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
             };
 
             this.BeginAnimation(Window.TopProperty, animation);
+            ToolbarSurface.BeginAnimation(UIElement.OpacityProperty, surfaceAnimation);
         }
 
         private void ApplyWindowsTheme()
@@ -499,6 +528,8 @@ namespace DesktopToolbar
                 item.ClearIconCache();
             }
 
+            SetAutoHideEnabled(_config.ToolbarSettings.AutoHideEnabled);
+
             this.Height = _config.ToolbarSettings.Height;
             this.Width = _config.ToolbarSettings.Width;
             this.Topmost = _config.ToolbarSettings.AlwaysOnTop;
@@ -565,7 +596,12 @@ namespace DesktopToolbar
 
             // Absolute top edge snapping (ignoring work area top offset so it sits flush at Y=0)
             _expandedTop = 0;
-            _dockedTop = -this.Height + 4; // Leaves a slim 4px grab line at the very top edge
+            _dockedTop = -this.Height + RevealTabHeight;
+            _isSnappedToTop = true;
+            _isExpanded = true;
+            ToolbarSurface.BeginAnimation(UIElement.OpacityProperty, null);
+            ToolbarSurface.Opacity = 1;
+            ToolbarSurface.IsHitTestVisible = true;
 
             double leftOffset = SystemParameters.WorkArea.Left + (screenWidth - this.Width) / 2;
 
@@ -594,11 +630,39 @@ namespace DesktopToolbar
         {
             if (e.ButtonState == MouseButtonState.Pressed && !_config.ToolbarSettings.IsLocked)
             {
+                _isDraggingWindow = true;
+                _hideDelayTimer?.Stop();
                 try
                 {
                     this.DragMove();
                 }
                 catch { }
+                finally
+                {
+                    _isDraggingWindow = false;
+                    CompleteWindowDrag();
+                }
+            }
+        }
+
+        private void CompleteWindowDrag()
+        {
+            _isExpanded = true;
+            RevealTab.Visibility = Visibility.Collapsed;
+            ToolbarSurface.BeginAnimation(UIElement.OpacityProperty, null);
+            ToolbarSurface.Opacity = 1;
+            ToolbarSurface.IsHitTestVisible = true;
+
+            if (Math.Abs(Top) <= TopSnapThreshold)
+            {
+                _isSnappedToTop = true;
+                _expandedTop = 0;
+                _dockedTop = -Height + RevealTabHeight;
+                Top = _expandedTop;
+            }
+            else
+            {
+                _isSnappedToTop = false;
             }
         }
 
@@ -787,6 +851,28 @@ namespace DesktopToolbar
             _config.ToolbarSettings.IsLocked = !_config.ToolbarSettings.IsLocked;
             SaveConfiguration();
             LoadConfiguration();
+        }
+
+        private void Menu_ToggleAutoHide_Click(object sender, RoutedEventArgs e)
+        {
+            SetAutoHideEnabled(MenuAutoHideToggle.IsChecked);
+            SaveConfiguration();
+        }
+
+        private void SetAutoHideEnabled(bool isEnabled)
+        {
+            _isAutoHideEnabled = isEnabled;
+            _config.ToolbarSettings.AutoHideEnabled = isEnabled;
+            MenuAutoHideToggle.IsChecked = isEnabled;
+
+            if (!isEnabled)
+            {
+                _hideDelayTimer?.Stop();
+                if (!_isExpanded && _isSnappedToTop)
+                {
+                    SlideWindow(true);
+                }
+            }
         }
 
         private void Menu_ModeIconsAndText_Click(object sender, RoutedEventArgs e)

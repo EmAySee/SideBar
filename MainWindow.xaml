@@ -30,14 +30,15 @@
         <TranslateTransform x:Key="ButtonPressedOffset" Y="1"/>
     </Window.Resources>
 
-    <Border Background="{DynamicResource ToolbarBg}" 
-            BorderBrush="{DynamicResource ToolbarBorder}" 
-            BorderThickness="1" CornerRadius="8" Padding="8,6"
-            AllowDrop="True"
-            DragOver="Toolbar_DragOver"
-            DragLeave="Toolbar_DragLeave"
-            Drop="Toolbar_Drop"
-            MouseLeftButtonDown="Border_MouseLeftButtonDown">
+    <Grid>
+        <Border x:Name="ToolbarSurface" Background="{DynamicResource ToolbarBg}" 
+                BorderBrush="{DynamicResource ToolbarBorder}" 
+                BorderThickness="1" CornerRadius="8" Padding="8,6"
+                AllowDrop="True"
+                DragOver="Toolbar_DragOver"
+                DragLeave="Toolbar_DragLeave"
+                Drop="Toolbar_Drop"
+                MouseLeftButtonDown="Border_MouseLeftButtonDown">
 
         <!-- Toolbar Context Menu -->
         <Border.ContextMenu>
@@ -49,6 +50,8 @@
                     <MenuItem Header="Icons Only" Click="Menu_ModeIconsOnly_Click"/>
                 </MenuItem>
                 <MenuItem x:Name="MenuLockToggle" Header="🔒 Lock Toolbar" Click="Menu_ToggleLock_Click"/>
+                <MenuItem x:Name="MenuAutoHideToggle" Header="Auto-hide when snapped to top"
+                          IsCheckable="True" Click="Menu_ToggleAutoHide_Click"/>
                 <MenuItem Header="⚙️ Toolbar Settings..." Click="Menu_EditConfig_Click"/>
                 <Separator/>
                 <MenuItem Header="🔄 Reload Config" Click="Menu_Reload_Click"/>
@@ -142,5 +145,11 @@
 
 
         </Grid>
-    </Border>
+        </Border>
+        <Border x:Name="RevealTab" Width="30" Height="8"
+                HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                Background="{StaticResource ToolbarAccent}"
+                BorderBrush="{DynamicResource ToolbarBorder}" BorderThickness="1,1,1,0"
+                CornerRadius="4,4,0,0" Visibility="Collapsed" Panel.ZIndex="1"/>
+    </Grid>
 </Window>

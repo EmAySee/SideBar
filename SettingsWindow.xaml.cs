@@ -21,6 +21,7 @@ namespace DesktopToolbar
             DisplayModeComboBox.SelectedIndex = settings.DisplayMode == "IconsOnly" ? 1 : 0;
             BottomOffsetTextBox.Text = settings.BottomOffset.ToString(CultureInfo.CurrentCulture);
             AlwaysOnTopCheckBox.IsChecked = settings.AlwaysOnTop;
+            AutoHideCheckBox.IsChecked = settings.AutoHideEnabled;
             IsLockedCheckBox.IsChecked = settings.IsLocked;
         }
 
@@ -79,6 +80,7 @@ namespace DesktopToolbar
                 DisplayMode = DisplayModeComboBox.SelectedIndex == 1 ? "IconsOnly" : "IconsAndText",
                 IsLocked = IsLockedCheckBox.IsChecked == true,
                 AlwaysOnTop = AlwaysOnTopCheckBox.IsChecked == true,
+                AutoHideEnabled = AutoHideCheckBox.IsChecked == true,
                 TitleText = TitleTextBox.Text,
                 ShowTitle = ShowTitleCheckBox.IsChecked == true
             };
