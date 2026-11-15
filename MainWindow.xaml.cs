@@ -1,16 +1,18 @@
-﻿using System;
+﻿using Microsoft.Win32;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
-using Microsoft.Win32;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
+using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 using WinForms = System.Windows.Forms;
 using WpfDragEventArgs = System.Windows.DragEventArgs;
 using WpfMouseEventArgs = System.Windows.Input.MouseEventArgs;
@@ -28,11 +30,13 @@ namespace DesktopToolbar
     {
         public double Height { get; set; } = 44;
         public double Width { get; set; } = 750;
-        public double BottomOffset { get; set; } = 12;
+        public double BottomOffset { get; set; } = 0;
         public double CornerRadius { get; set; } = 6;
         public string DisplayMode { get; set; } = "IconsAndText";
         public bool IsLocked { get; set; } = false;
         public bool AlwaysOnTop { get; set; } = true;
+        public string TitleText { get; set; } = "LP:";
+        public bool ShowTitle { get; set; } = true;
     }
 
     public class LauncherItem
@@ -85,11 +89,10 @@ namespace DesktopToolbar
         {
             try
             {
-                // 1. Try custom icon file (.ico or .png) if specified
                 if (!string.IsNullOrWhiteSpace(IconPath) && File.Exists(IconPath))
                 {
                     if (IconPath.EndsWith(".ico", StringComparison.OrdinalIgnoreCase))
-                    { 
+                    {
                         using (var icon = new System.Drawing.Icon(IconPath))
                         {
                             var bmpSource = Imaging.CreateBitmapSourceFromHIcon(
@@ -105,10 +108,10 @@ namespace DesktopToolbar
                         var bitmap = new BitmapImage();
                         bitmap.BeginInit();
                         bitmap.UriSource = new Uri(IconPath, UriKind.Absolute);
-                        bitmap.DecodePixelWidth = 56; // 28px * 2 for high-DPI crispness
+                        bitmap.DecodePixelWidth = 56;
                         bitmap.CacheOption = BitmapCacheOption.OnLoad;
                         bitmap.EndInit();
-                        bitmap.Freeze(); // Crucial for memory management
+                        bitmap.Freeze();
                         return bitmap;
                     }
                 }
@@ -118,7 +121,6 @@ namespace DesktopToolbar
                     return GetShell32Icon(shell32Index);
                 }
 
-                // 2. Fall back to extracting icon from executable using Shell32 for reliability
                 if (!string.IsNullOrWhiteSpace(Executable) && File.Exists(Executable))
                 {
                     using (var icon = System.Drawing.Icon.ExtractAssociatedIcon(Executable))
@@ -196,6 +198,13 @@ namespace DesktopToolbar
 
     public partial class MainWindow : Window
     {
+        private bool _isAutoHideEnabled = true;
+        private bool _isExpanded = true;
+        private DispatcherTimer? _hoverCheckTimer;
+        private DispatcherTimer? _hideDelayTimer;
+        private double _dockedTop;
+        private double _expandedTop;
+
         private const int GWL_EXSTYLE = -20;
         private const int WS_EX_TOOLWINDOW = 0x00000080;
         private const int WS_EX_NOACTIVATE = 0x08000000;
@@ -222,10 +231,15 @@ namespace DesktopToolbar
         private WpfPoint _dragStartPoint;
 
         public Visibility TextVisibility => _config.ToolbarSettings.DisplayMode == "IconsOnly" ? Visibility.Collapsed : Visibility.Visible;
+        public string ToolbarTitle => _config.ToolbarSettings.TitleText;
+        public Visibility ToolbarTitleVisibility => _config.ToolbarSettings.ShowTitle && !string.IsNullOrWhiteSpace(_config.ToolbarSettings.TitleText)
+            ? Visibility.Visible
+            : Visibility.Collapsed;
 
         public MainWindow()
         {
             InitializeComponent();
+            SetupAutoHide();
             ApplyWindowsTheme();
             SystemEvents.UserPreferenceChanged += SystemEvents_UserPreferenceChanged;
             Icon = CreateApplicationIcon();
@@ -235,9 +249,82 @@ namespace DesktopToolbar
             _configPath = Path.Combine(appDataDir, "toolbar_config.json");
 
             LoadConfiguration();
-            PositionAtBottom();
+            PositionAtTop();
             SetupSystemTray();
             this.DataContext = this;
+        }
+
+        private void SetupAutoHide()
+        {
+            // Poll mouse cursor position to detect top-edge hover
+            _hoverCheckTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(50)
+            };
+            _hoverCheckTimer.Tick += (s, e) => CheckMouseProximity();
+            _hoverCheckTimer.Start();
+
+            // 2-second delay timer before hiding
+            _hideDelayTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(2)
+            };
+            _hideDelayTimer.Tick += (s, e) =>
+            {
+                _hideDelayTimer.Stop();
+                var mousePos = WinForms.Cursor.Position;
+                if (mousePos.Y > 6 && !this.IsMouseOver && !this.IsActive)
+                {
+                    SlideWindow(false);
+                }
+            };
+        }
+
+        private void CheckMouseProximity()
+        {
+            if (!_isAutoHideEnabled || _isArrangeMode) return;
+
+            var mousePos = WinForms.Cursor.Position;
+
+            // Trigger zone: absolute top of the screen (Y <= 4)
+            bool isNearEdge = mousePos.Y <= 4;
+            bool isOverWindow = this.IsMouseOver;
+
+            if ((isNearEdge || isOverWindow) && !_isExpanded)
+            {
+                _hideDelayTimer?.Stop();
+                SlideWindow(true); // Expand down into view
+            }
+            else if (!isNearEdge && !isOverWindow && _isExpanded)
+            {
+                if (this.IsActive) return;
+
+                if (_hideDelayTimer != null && !_hideDelayTimer.IsEnabled)
+                {
+                    _hideDelayTimer.Start(); // Start 2-second countdown to hide
+                }
+            }
+            else if (isNearEdge || isOverWindow)
+            {
+                _hideDelayTimer?.Stop(); // Cancel hide if mouse comes back
+            }
+        }
+
+        private void SlideWindow(bool expand)
+        {
+            if (_isExpanded == expand) return;
+            _isExpanded = expand;
+
+            double targetTop = expand ? _expandedTop : _dockedTop;
+
+            DoubleAnimation animation = new DoubleAnimation
+            {
+                To = targetTop,
+                Duration = TimeSpan.FromMilliseconds(200),
+                EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
+            };
+
+            this.BeginAnimation(Window.TopProperty, animation);
         }
 
         private void ApplyWindowsTheme()
@@ -265,6 +352,7 @@ namespace DesktopToolbar
             UpdateBrushColor("ToolbarText", isLightTheme ? "1A1A1A" : "F3F3F3");
             UpdateBrushColor("ButtonBg", isLightTheme ? "E9E9E9" : "2B2B2B");
             UpdateBrushColor("ButtonHover", isLightTheme ? "DADADA" : "3A3A3A");
+            UpdateBrushColor("ButtonPressed", isLightTheme ? "C5C5C5" : "1C1C1C");
         }
 
         private void UpdateBrushColor(string resourceKey, string hexColor)
@@ -274,8 +362,6 @@ namespace DesktopToolbar
                 System.Windows.Media.Color color = (System.Windows.Media.Color)
                     System.Windows.Media.ColorConverter.ConvertFromString("#" + hexColor);
 
-                // Resource brushes may be frozen/shared by WPF and therefore cannot be
-                // modified. Replace the resource instead of changing it in place.
                 Resources[resourceKey] = new System.Windows.Media.SolidColorBrush(color);
             }
         }
@@ -314,7 +400,8 @@ namespace DesktopToolbar
 
             trayMenu.Items.Add(new WinForms.ToolStripSeparator());
             trayMenu.Items.Add("Reload Config", null, (s, e) => LoadConfiguration());
-            trayMenu.Items.Add("Open Settings File", null, (s, e) => OpenConfigFile());
+            trayMenu.Items.Add("Toolbar Settings...", null, (s, e) => ShowSettingsWindow());
+            trayMenu.Items.Add("Open Config File", null, (s, e) => OpenConfigFile());
             trayMenu.Items.Add(new WinForms.ToolStripSeparator());
             trayMenu.Items.Add("Exit SideBar", null, (s, e) => System.Windows.Application.Current.Shutdown());
 
@@ -407,7 +494,6 @@ namespace DesktopToolbar
                 _config = new ToolbarConfig();
             }
 
-            // Clear icon caches upon reload so updated icons reflect properly
             foreach (var item in _config.LauncherItems)
             {
                 item.ClearIconCache();
@@ -473,15 +559,18 @@ namespace DesktopToolbar
             return IntPtr.Zero;
         }
 
-        private void PositionAtBottom()
+        private void PositionAtTop()
         {
             double screenWidth = SystemParameters.WorkArea.Width;
-            double screenHeight = SystemParameters.WorkArea.Height;
-            double topOffset = SystemParameters.WorkArea.Top + screenHeight - this.Height - _config.ToolbarSettings.BottomOffset;
+
+            // Absolute top edge snapping (ignoring work area top offset so it sits flush at Y=0)
+            _expandedTop = 0;
+            _dockedTop = -this.Height + 4; // Leaves a slim 4px grab line at the very top edge
+
             double leftOffset = SystemParameters.WorkArea.Left + (screenWidth - this.Width) / 2;
 
             this.Left = leftOffset;
-            this.Top = topOffset;
+            this.Top = _isExpanded ? _expandedTop : _dockedTop;
         }
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
@@ -490,6 +579,8 @@ namespace DesktopToolbar
 
         protected override void OnClosed(EventArgs e)
         {
+            _hoverCheckTimer?.Stop();
+            _hideDelayTimer?.Stop();
             SystemEvents.UserPreferenceChanged -= SystemEvents_UserPreferenceChanged;
             if (_trayIcon != null)
             {
@@ -719,7 +810,23 @@ namespace DesktopToolbar
 
         private void Menu_EditConfig_Click(object sender, RoutedEventArgs e)
         {
-            OpenConfigFile();
+            ShowSettingsWindow();
+        }
+
+        private void ShowSettingsWindow()
+        {
+            var settingsWindow = new SettingsWindow(_config.ToolbarSettings)
+            {
+                Owner = this
+            };
+
+            if (settingsWindow.ShowDialog() == true && settingsWindow.UpdatedSettings is ToolbarSettings updatedSettings)
+            {
+                _config.ToolbarSettings = updatedSettings;
+                SaveConfiguration();
+                LoadConfiguration();
+                PositionAtTop();
+            }
         }
 
         private void OpenConfigFile()
@@ -755,7 +862,7 @@ namespace DesktopToolbar
             {
                 if (PromptEditLauncher("Edit Launcher", item))
                 {
-                    item.ClearIconCache(); // Re-resolve icon if path changed
+                    item.ClearIconCache();
                     SaveConfiguration();
                     LoadConfiguration();
                 }
@@ -792,12 +899,10 @@ namespace DesktopToolbar
 
             StackPanel panel = new StackPanel { Margin = new Thickness(15) };
 
-            // Label Input
             panel.Children.Add(new System.Windows.Controls.TextBlock { Text = "Label:", Margin = new Thickness(0, 0, 0, 4) });
             System.Windows.Controls.TextBox txtLabel = new System.Windows.Controls.TextBox { Text = item.Label, Margin = new Thickness(0, 0, 0, 10) };
             panel.Children.Add(txtLabel);
 
-            // Executable Path Input + Browse Button
             panel.Children.Add(new System.Windows.Controls.TextBlock { Text = "Executable Path / Command:", Margin = new Thickness(0, 0, 0, 4) });
             Grid execGrid = new Grid();
             execGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -824,7 +929,6 @@ namespace DesktopToolbar
             execGrid.Children.Add(btnBrowseExec);
             panel.Children.Add(execGrid);
 
-            // Custom Icon File Path Input + Browse Button (Optional override)
             panel.Children.Add(new System.Windows.Controls.TextBlock { Text = "Custom Icon File (.ico / .png - Optional):", Margin = new Thickness(0, 10, 0, 4) });
             Grid iconGrid = new Grid();
             iconGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -892,12 +996,10 @@ namespace DesktopToolbar
             };
             panel.Children.Add(btnChooseShellIcon);
 
-            // Arguments Input
             panel.Children.Add(new System.Windows.Controls.TextBlock { Text = "Arguments:", Margin = new Thickness(0, 10, 0, 4) });
             System.Windows.Controls.TextBox txtArgs = new System.Windows.Controls.TextBox { Text = item.Arguments, Margin = new Thickness(0, 0, 0, 14) };
             panel.Children.Add(txtArgs);
 
-            // Save / Cancel Buttons
             StackPanel btnPanel = new StackPanel { Orientation = System.Windows.Controls.Orientation.Horizontal, HorizontalAlignment = System.Windows.HorizontalAlignment.Right };
             System.Windows.Controls.Button btnSave = new System.Windows.Controls.Button { Content = "Save", Width = 75, Margin = new Thickness(0, 0, 8, 0), IsDefault = true };
             System.Windows.Controls.Button btnCancel = new System.Windows.Controls.Button { Content = "Cancel", Width = 75, IsCancel = true };

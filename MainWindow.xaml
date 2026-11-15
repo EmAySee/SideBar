@@ -16,11 +16,23 @@
         <SolidColorBrush x:Key="ToolbarText" Color="#F3F3F3"/>
         <SolidColorBrush x:Key="ButtonBg" Color="#2B2B2B"/>
         <SolidColorBrush x:Key="ButtonHover" Color="#3A3A3A"/>
+        <SolidColorBrush x:Key="ButtonPressed" Color="#1C1C1C"/>
+        <LinearGradientBrush x:Key="ButtonGloss" StartPoint="0,0" EndPoint="0,1">
+            <GradientStop Color="#38FFFFFF" Offset="0"/>
+            <GradientStop Color="#0AFFFFFF" Offset="0.45"/>
+            <GradientStop Color="#00000000" Offset="0.62"/>
+            <GradientStop Color="#18000000" Offset="1"/>
+        </LinearGradientBrush>
+        <LinearGradientBrush x:Key="ButtonShine" StartPoint="0,0" EndPoint="0,1">
+            <GradientStop Color="#70FFFFFF" Offset="0"/>
+            <GradientStop Color="#18FFFFFF" Offset="1"/>
+        </LinearGradientBrush>
+        <TranslateTransform x:Key="ButtonPressedOffset" Y="1"/>
     </Window.Resources>
 
-        <Border Background="{DynamicResource ToolbarBg}" 
+    <Border Background="{DynamicResource ToolbarBg}" 
             BorderBrush="{DynamicResource ToolbarBorder}" 
-            BorderThickness="1" CornerRadius="8" Padding="10,8"
+            BorderThickness="1" CornerRadius="8" Padding="8,6"
             AllowDrop="True"
             DragOver="Toolbar_DragOver"
             DragLeave="Toolbar_DragLeave"
@@ -37,7 +49,7 @@
                     <MenuItem Header="Icons Only" Click="Menu_ModeIconsOnly_Click"/>
                 </MenuItem>
                 <MenuItem x:Name="MenuLockToggle" Header="🔒 Lock Toolbar" Click="Menu_ToggleLock_Click"/>
-                <MenuItem Header="⚙️ Open Config Settings" Click="Menu_EditConfig_Click"/>
+                <MenuItem Header="⚙️ Toolbar Settings..." Click="Menu_EditConfig_Click"/>
                 <Separator/>
                 <MenuItem Header="🔄 Reload Config" Click="Menu_Reload_Click"/>
                 <MenuItem Header="❌ Close Toolbar" Click="Menu_Close_Click"/>
@@ -54,7 +66,7 @@
             <!-- Drag Handle / App Indicator -->
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Grid.Column="0" Margin="6,0,16,0">
                 <TextBlock x:Name="DragHandleIcon" Text="⠿" FontSize="18" Foreground="{DynamicResource ToolbarText}" Opacity="0.5" VerticalAlignment="Center" Margin="0,0,8,0" Cursor="SizeAll"/>
-                <TextBlock Text="LP" FontWeight="Medium" FontSize="14" Foreground="{DynamicResource ToolbarText}" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding ToolbarTitle}" Visibility="{Binding ToolbarTitleVisibility}" FontWeight="Medium" FontSize="14" Foreground="{DynamicResource ToolbarText}" VerticalAlignment="Center"/>
             </StackPanel>
 
             <!-- Dynamic App Buttons Repeater -->
@@ -86,11 +98,15 @@
                                         <Border x:Name="btnBorder" Width="44" Background="{DynamicResource ButtonBg}" CornerRadius="8" 
                                             BorderBrush="{DynamicResource ToolbarBorder}" BorderThickness="1"
                                             VerticalAlignment="Center" HorizontalAlignment="Center">
-                                        <StackPanel Orientation="Vertical" VerticalAlignment="Center" HorizontalAlignment="Center">
-                                            <Image Source="{Binding AppIcon}" Width="28" Height="28" VerticalAlignment="Center"/>
-                                            <TextBlock x:Name="BtnText" Text="{Binding Label}" Foreground="{DynamicResource ToolbarText}" FontSize="6" TextAlignment="Center" TextWrapping="Wrap" MaxWidth="40" VerticalAlignment="Center" Margin="0,1,0,0"
-                                                       Visibility="{Binding DataContext.TextVisibility, RelativeSource={RelativeSource AncestorType=Window}}"/>
-                                        </StackPanel>
+                                        <Grid>
+                                            <Border x:Name="btnGloss" CornerRadius="7" Background="{StaticResource ButtonGloss}"
+                                                    BorderBrush="{StaticResource ButtonShine}" BorderThickness="1" IsHitTestVisible="False"/>
+                                            <StackPanel x:Name="ButtonContent" Orientation="Vertical" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                                <Image Source="{Binding AppIcon}" Width="28" Height="28" VerticalAlignment="Center"/>
+                                                <TextBlock x:Name="BtnText" Text="{Binding Label}" Foreground="{DynamicResource ToolbarText}" FontSize="6" TextAlignment="Center" TextWrapping="Wrap" MaxWidth="40" VerticalAlignment="Center" Margin="0,1,0,0"
+                                                           Visibility="{Binding DataContext.TextVisibility, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                                            </StackPanel>
+                                        </Grid>
                                     </Border>
                                     <ControlTemplate.Triggers>
                                         <DataTrigger Binding="{Binding DataContext.TextVisibility, RelativeSource={RelativeSource AncestorType=Window}}" Value="Visible">
@@ -102,6 +118,11 @@
                                         </DataTrigger>
                                         <Trigger Property="IsMouseOver" Value="True">
                                             <Setter TargetName="btnBorder" Property="Background" Value="{DynamicResource ButtonHover}"/>
+                                        </Trigger>
+                                        <Trigger Property="IsPressed" Value="True">
+                                            <Setter TargetName="btnBorder" Property="Background" Value="{DynamicResource ButtonPressed}"/>
+                                            <Setter TargetName="btnBorder" Property="BorderThickness" Value="2"/>
+                                            <Setter TargetName="ButtonContent" Property="RenderTransform" Value="{StaticResource ButtonPressedOffset}"/>
                                         </Trigger>
                                     </ControlTemplate.Triggers>
                                 </ControlTemplate>
