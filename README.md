@@ -24,3 +24,7 @@ A lightweight, focus-immune custom WPF toolbar application designed to replace h
 2. Run the installer. It installs the application cleanly to your user profile (`%appdata%\SideBar`) without requiring administrator privileges[cite: 8].
 3. The installer automatically creates a Start Menu shortcut and an optional desktop shortcut, while preserving your configuration files during upgrades[cite: 8].
 
+### Building from Source
+Clone the repository and build the solution using Visual Studio 2026 or the .NET CLI[cite: 8, 10]:
+```cmd
+dotnet build -c Release
