@@ -1,0 +1,49 @@
+<Window x:Class="DesktopToolbar.ShortcutManagerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Edit Shortcuts" Width="760" Height="480"
+        MinWidth="640" MinHeight="360"
+        WindowStartupLocation="CenterOwner" ResizeMode="CanResize">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="Edit Shortcuts" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,14"/>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="2*"/>
+                <ColumnDefinition Width="3*"/>
+            </Grid.ColumnDefinitions>
+
+            <ListBox x:Name="ShortcutListBox" SelectionChanged="ShortcutListBox_SelectionChanged"
+                     MouseDoubleClick="ShortcutListBox_MouseDoubleClick">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Margin="4,5">
+                            <TextBlock Text="{Binding Label}" FontWeight="SemiBold"/>
+                            <TextBlock Text="{Binding Executable}" Opacity="0.7" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <StackPanel Grid.Column="1" Margin="16,0,0,0">
+                <TextBlock Text="Selected shortcut" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                <TextBlock x:Name="SelectedLabelText" FontSize="13" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                <TextBlock x:Name="SelectedExecutableText" Margin="0,4,0,12" Opacity="0.75" TextWrapping="Wrap"/>
+                <Button Content="Add Shortcut..." MinWidth="120" HorizontalAlignment="Left" Margin="0,0,0,8" Click="AddButton_Click"/>
+                <Button x:Name="EditButton" Content="Edit Selected..." MinWidth="120" HorizontalAlignment="Left" Margin="0,0,0,8" IsEnabled="False" Click="EditButton_Click"/>
+                <Button x:Name="DeleteButton" Content="Delete Selected" MinWidth="120" HorizontalAlignment="Left" IsEnabled="False" Click="DeleteButton_Click"/>
+            </StackPanel>
+        </Grid>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
+            <Button Content="Cancel" IsCancel="True" MinWidth="90" Padding="10,5" Margin="0,0,8,0"/>
+            <Button Content="Save" IsDefault="True" MinWidth="90" Padding="10,5" Click="SaveButton_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

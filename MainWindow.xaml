@@ -44,6 +44,7 @@
         <Border.ContextMenu>
             <ContextMenu>
                 <MenuItem Header="➕ Add New Launcher..." Click="Menu_AddLauncher_Click"/>
+                <MenuItem Header="Edit Shortcuts..." Click="Menu_EditShortcuts_Click"/>
                 <Separator/>
                 <MenuItem Header="Display Mode">
                     <MenuItem Header="Icons and Text" Click="Menu_ModeIconsAndText_Click"/>

@@ -934,9 +934,27 @@ namespace DesktopToolbar
         private void Menu_AddLauncher_Click(object sender, RoutedEventArgs e)
         {
             var newItem = new LauncherItem { Label = "New App", Executable = "cmd.exe", Arguments = "" };
-            if (PromptEditLauncher("Add New Launcher", newItem))
+            if (PromptEditLauncher(this, "Add New Launcher", newItem))
             {
                 _config.LauncherItems.Add(newItem);
+                SaveConfiguration();
+                LoadConfiguration();
+            }
+        }
+
+        private void Menu_EditShortcuts_Click(object sender, RoutedEventArgs e)
+        {
+            var manager = new ShortcutManagerWindow(_config.LauncherItems, PromptEditLauncher)
+            {
+                Owner = this,
+                Topmost = this.Topmost,
+                Icon = this.Icon
+            };
+
+            if (manager.ShowDialog() == true && manager.UpdatedItems is not null)
+            {
+                _config.LauncherItems.Clear();
+                _config.LauncherItems.AddRange(manager.UpdatedItems);
                 SaveConfiguration();
                 LoadConfiguration();
             }
@@ -946,7 +964,7 @@ namespace DesktopToolbar
         {
             if (sender is System.Windows.Controls.MenuItem mi && mi.DataContext is LauncherItem item)
             {
-                if (PromptEditLauncher("Edit Launcher", item))
+                if (PromptEditLauncher(this, "Edit Launcher", item))
                 {
                     item.ClearIconCache();
                     SaveConfiguration();
@@ -968,7 +986,7 @@ namespace DesktopToolbar
             }
         }
 
-        private bool PromptEditLauncher(string title, LauncherItem item)
+        private bool PromptEditLauncher(Window owner, string title, LauncherItem item)
         {
             Window dialog = new Window
             {
@@ -977,10 +995,10 @@ namespace DesktopToolbar
                 Height = 500,
                 WindowStartupLocation = WindowStartupLocation.CenterOwner,
                 ResizeMode = ResizeMode.NoResize,
-                Owner = this,
-                Topmost = this.Topmost,
+                Owner = owner,
+                Topmost = owner.Topmost,
                 ShowInTaskbar = false,
-                Icon = this.Icon
+                Icon = owner.Icon
             };
 
             StackPanel panel = new StackPanel { Margin = new Thickness(15) };
@@ -1072,7 +1090,7 @@ namespace DesktopToolbar
             };
             btnChooseShellIcon.Click += (s, ev) =>
             {
-                string? chosenIcon = ShowShell32IconPicker();
+                string? chosenIcon = ShowShell32IconPicker(owner);
                 if (chosenIcon != null)
                 {
                     cmbBuiltInIcon.SelectedValue = LauncherItem.BuiltInIconIndexes.ContainsKey(chosenIcon) ? chosenIcon : "";
@@ -1117,7 +1135,7 @@ namespace DesktopToolbar
             return dialogResult;
         }
 
-        private string? ShowShell32IconPicker()
+        private string? ShowShell32IconPicker(Window owner)
         {
             Window picker = new Window
             {
@@ -1125,11 +1143,11 @@ namespace DesktopToolbar
                 Width = 620,
                 Height = 470,
                 WindowStartupLocation = WindowStartupLocation.CenterOwner,
-                Owner = this,
+                Owner = owner,
                 ResizeMode = ResizeMode.CanResize,
-                Topmost = this.Topmost,
+                Topmost = owner.Topmost,
                 ShowInTaskbar = false,
-                Icon = this.Icon
+                Icon = owner.Icon
             };
 
             string? selectedIcon = null;
