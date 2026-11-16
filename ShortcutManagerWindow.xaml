@@ -35,6 +35,8 @@
                 <TextBlock Text="Selected shortcut" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,8"/>
                 <TextBlock x:Name="SelectedLabelText" FontSize="13" FontWeight="SemiBold" TextWrapping="Wrap"/>
                 <TextBlock x:Name="SelectedExecutableText" Margin="0,4,0,12" Opacity="0.75" TextWrapping="Wrap"/>
+                <Button x:Name="MoveUpButton" Content="Move Up" MinWidth="120" HorizontalAlignment="Left" Margin="0,0,0,8" IsEnabled="False" Click="MoveUpButton_Click"/>
+                <Button x:Name="MoveDownButton" Content="Move Down" MinWidth="120" HorizontalAlignment="Left" Margin="0,0,0,8" IsEnabled="False" Click="MoveDownButton_Click"/>
                 <Button Content="Add Shortcut..." MinWidth="120" HorizontalAlignment="Left" Margin="0,0,0,8" Click="AddButton_Click"/>
                 <Button x:Name="EditButton" Content="Edit Selected..." MinWidth="120" HorizontalAlignment="Left" Margin="0,0,0,8" IsEnabled="False" Click="EditButton_Click"/>
                 <Button x:Name="DeleteButton" Content="Delete Selected" MinWidth="120" HorizontalAlignment="Left" IsEnabled="False" Click="DeleteButton_Click"/>

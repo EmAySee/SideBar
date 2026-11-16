@@ -48,9 +48,12 @@ namespace DesktopToolbar
 
         private void ShortcutListBox_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
         {
-            bool hasSelection = ShortcutListBox.SelectedItem is LauncherItem;
+            int selectedIndex = ShortcutListBox.SelectedIndex;
+            bool hasSelection = selectedIndex >= 0;
             EditButton.IsEnabled = hasSelection;
             DeleteButton.IsEnabled = hasSelection;
+            MoveUpButton.IsEnabled = selectedIndex > 0;
+            MoveDownButton.IsEnabled = selectedIndex >= 0 && selectedIndex < _items.Count - 1;
 
             if (ShortcutListBox.SelectedItem is LauncherItem item)
             {
@@ -62,6 +65,31 @@ namespace DesktopToolbar
                 SelectedLabelText.Text = "";
                 SelectedExecutableText.Text = "";
             }
+        }
+
+        private void MoveUpButton_Click(object sender, RoutedEventArgs e)
+        {
+            MoveSelectedItem(-1);
+        }
+
+        private void MoveDownButton_Click(object sender, RoutedEventArgs e)
+        {
+            MoveSelectedItem(1);
+        }
+
+        private void MoveSelectedItem(int offset)
+        {
+            int currentIndex = ShortcutListBox.SelectedIndex;
+            int newIndex = currentIndex + offset;
+            if (currentIndex < 0 || newIndex < 0 || newIndex >= _items.Count)
+            {
+                return;
+            }
+
+            LauncherItem selectedItem = _items[currentIndex];
+            _items.RemoveAt(currentIndex);
+            _items.Insert(newIndex, selectedItem);
+            RefreshList(selectedItem);
         }
 
         private void AddButton_Click(object sender, RoutedEventArgs e)

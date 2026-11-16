@@ -203,6 +203,12 @@ namespace DesktopToolbar
         private bool _isExpanded = true;
         private bool _isSnappedToTop = true;
         private bool _isDraggingWindow;
+        private double _arrangePreviousLeft;
+        private double _arrangePreviousTop;
+        private double _arrangePreviousExpandedTop;
+        private double _arrangePreviousDockedTop;
+        private bool _arrangePreviousIsExpanded;
+        private bool _arrangePreviousIsSnappedToTop;
         private DispatcherTimer? _hoverCheckTimer;
         private DispatcherTimer? _hideDelayTimer;
         private double _dockedTop;
@@ -278,7 +284,7 @@ namespace DesktopToolbar
             _hideDelayTimer.Tick += (s, e) =>
             {
                 _hideDelayTimer.Stop();
-                if (_isAutoHideEnabled && _isSnappedToTop && !_isDraggingWindow &&
+                if (_isAutoHideEnabled && !_isArrangeMode && _isSnappedToTop && !_isDraggingWindow &&
                     !IsCursorInRevealZone() && !this.IsMouseOver)
                 {
                     SlideWindow(false);
@@ -430,6 +436,7 @@ namespace DesktopToolbar
             trayMenu.Items.Add(new WinForms.ToolStripSeparator());
             trayMenu.Items.Add("Reload Config", null, (s, e) => LoadConfiguration());
             trayMenu.Items.Add("Toolbar Settings...", null, (s, e) => ShowSettingsWindow());
+            trayMenu.Items.Add("About SideBar...", null, (s, e) => ShowAboutWindow());
             trayMenu.Items.Add("Open Config File", null, (s, e) => OpenConfigFile());
             trayMenu.Items.Add(new WinForms.ToolStripSeparator());
             trayMenu.Items.Add("Exit SideBar", null, (s, e) => System.Windows.Application.Current.Shutdown());
@@ -440,8 +447,59 @@ namespace DesktopToolbar
 
         private void ToggleArrangeMode()
         {
-            _isArrangeMode = _trayArrangeItem?.Checked == true;
+            bool arrangeMode = _trayArrangeItem?.Checked == true;
             _draggedLauncher = null;
+
+            if (arrangeMode == _isArrangeMode)
+            {
+                return;
+            }
+
+            if (arrangeMode)
+            {
+                _arrangePreviousLeft = Left;
+                _arrangePreviousTop = _isSnappedToTop
+                    ? (_isExpanded ? _expandedTop : _dockedTop)
+                    : Top;
+                _arrangePreviousExpandedTop = _expandedTop;
+                _arrangePreviousDockedTop = _dockedTop;
+                _arrangePreviousIsExpanded = _isExpanded;
+                _arrangePreviousIsSnappedToTop = _isSnappedToTop;
+
+                _isArrangeMode = true;
+                _hideDelayTimer?.Stop();
+                SetAutoHideEnabled(_config.ToolbarSettings.AutoHideEnabled);
+
+                System.Windows.Rect workArea = SystemParameters.WorkArea;
+                _isSnappedToTop = false;
+                _isExpanded = true;
+                _expandedTop = workArea.Bottom - Height;
+                _dockedTop = _expandedTop;
+                Left = workArea.Left + (workArea.Width - Width) / 2;
+                Top = _expandedTop;
+                RevealTab.Visibility = Visibility.Collapsed;
+                ToolbarSurface.BeginAnimation(UIElement.OpacityProperty, null);
+                ToolbarSurface.Opacity = 1;
+                ToolbarSurface.IsHitTestVisible = true;
+            }
+            else
+            {
+                _isArrangeMode = false;
+                SetAutoHideEnabled(_config.ToolbarSettings.AutoHideEnabled);
+
+                ToolbarSurface.BeginAnimation(UIElement.OpacityProperty, null);
+                this.BeginAnimation(Window.TopProperty, null);
+                Left = _arrangePreviousLeft;
+                _expandedTop = _arrangePreviousExpandedTop;
+                _dockedTop = _arrangePreviousDockedTop;
+                _isSnappedToTop = _arrangePreviousIsSnappedToTop;
+                _isExpanded = _arrangePreviousIsExpanded;
+                Top = _arrangePreviousTop;
+                RevealTab.Visibility = _isExpanded ? Visibility.Collapsed : Visibility.Visible;
+                ToolbarSurface.Opacity = _isExpanded ? 1 : 0;
+                ToolbarSurface.IsHitTestVisible = _isExpanded;
+            }
+
             Cursor = _isArrangeMode ? System.Windows.Input.Cursors.SizeAll : System.Windows.Input.Cursors.Arrow;
         }
 
@@ -861,11 +919,11 @@ namespace DesktopToolbar
 
         private void SetAutoHideEnabled(bool isEnabled)
         {
-            _isAutoHideEnabled = isEnabled;
+            _isAutoHideEnabled = isEnabled && !_isArrangeMode;
             _config.ToolbarSettings.AutoHideEnabled = isEnabled;
             MenuAutoHideToggle.IsChecked = isEnabled;
 
-            if (!isEnabled)
+            if (!_isAutoHideEnabled)
             {
                 _hideDelayTimer?.Stop();
                 if (!_isExpanded && _isSnappedToTop)
@@ -899,6 +957,22 @@ namespace DesktopToolbar
             ShowSettingsWindow();
         }
 
+        private void Menu_About_Click(object sender, RoutedEventArgs e)
+        {
+            ShowAboutWindow();
+        }
+
+        private void ShowAboutWindow()
+        {
+            var aboutWindow = new AboutWindow
+            {
+                Owner = this,
+                Topmost = this.Topmost,
+                Icon = this.Icon
+            };
+            aboutWindow.ShowDialog();
+        }
+
         private void ShowSettingsWindow()
         {
             var settingsWindow = new SettingsWindow(_config.ToolbarSettings)
@@ -911,7 +985,18 @@ namespace DesktopToolbar
                 _config.ToolbarSettings = updatedSettings;
                 SaveConfiguration();
                 LoadConfiguration();
-                PositionAtTop();
+                if (_isArrangeMode)
+                {
+                    System.Windows.Rect workArea = SystemParameters.WorkArea;
+                    _expandedTop = workArea.Bottom - Height;
+                    _dockedTop = _expandedTop;
+                    Left = workArea.Left + (workArea.Width - Width) / 2;
+                    Top = _expandedTop;
+                }
+                else
+                {
+                    PositionAtTop();
+                }
             }
         }
 

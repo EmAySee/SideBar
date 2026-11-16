@@ -55,6 +55,7 @@
                           IsCheckable="True" Click="Menu_ToggleAutoHide_Click"/>
                 <MenuItem Header="⚙️ Toolbar Settings..." Click="Menu_EditConfig_Click"/>
                 <Separator/>
+                <MenuItem Header="About SideBar..." Click="Menu_About_Click"/>
                 <MenuItem Header="🔄 Reload Config" Click="Menu_Reload_Click"/>
                 <MenuItem Header="❌ Close Toolbar" Click="Menu_Close_Click"/>
             </ContextMenu>
