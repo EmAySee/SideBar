@@ -1,6 +1,6 @@
-# SideBar
+# PhantomCore SideBar
 
-A lightweight, focus-immune Windows 11 Fluent WPF desktop launcher toolbar designed to streamline workspace workflows without stealing focus from active windows.
+A lightweight, focus-immune Windows 11 Fluent WPF desktop launcher toolbar — part of the **PhantomCore** suite — designed to streamline workspace workflows without stealing focus from active windows.
 
 ## Features
 - **Windows 11 Fluent Design & Live Theme Sync:** Automatically follows Windows 11 Dark/Light theme (with optional manual override in Settings), including native dark/light DWM title bars, rounded corners, Fluent menus, and a themed system tray menu.

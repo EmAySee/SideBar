@@ -17,7 +17,7 @@ namespace DesktopToolbar
 
             _currentSettings = settings;
 
-            TitleTextBox.Text = settings.TitleText ?? "SideBar";
+            TitleTextBox.Text = settings.TitleText ?? "PhantomCore SideBar";
             ShowTitleCheckBox.IsChecked = settings.ShowTitle;
             DisplayModeComboBox.SelectedIndex = settings.DisplayMode == "IconsOnly" ? 1 : 0;
             ThemeModeComboBox.SelectedIndex = settings.ThemeMode?.ToLowerInvariant() switch

@@ -1,59 +1,173 @@
 <Window x:Class="DesktopToolbar.AboutWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="About SideBar"
-        Width="380"
+        Title="About PhantomCore SideBar"
+        Width="420"
         SizeToContent="Height"
-        WindowStartupLocation="CenterOwner"
+        WindowStartupLocation="CenterScreen"
         ResizeMode="NoResize"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
         ShowInTaskbar="False"
-        Background="{DynamicResource WindowBgBrush}"
-        Foreground="{DynamicResource TextPrimaryBrush}"
-        FontFamily="{StaticResource FluentFontFamily}">
+        FontFamily="{StaticResource FluentFontFamily}"
+        Opacity="0"
+        Loaded="Window_Loaded"
+        MouseLeftButtonDown="Window_MouseLeftButtonDown">
 
-    <Grid Margin="24">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+    <Border Margin="16"
+            Background="{DynamicResource WindowBgBrush}"
+            BorderBrush="{DynamicResource SurfaceBorderBrush}"
+            BorderThickness="1"
+            CornerRadius="16"
+            ClipToBounds="True">
+        <Border.Effect>
+            <DropShadowEffect Color="{DynamicResource ShadowColor}"
+                              BlurRadius="26"
+                              ShadowDepth="6"
+                              Direction="270"
+                              Opacity="0.42"/>
+        </Border.Effect>
 
-        <StackPanel Grid.Row="0" HorizontalAlignment="Center" Margin="0,4,0,22">
-            <Image x:Name="AppLogoImage"
-                   Width="84" Height="84"
-                   HorizontalAlignment="Center"
-                   RenderOptions.BitmapScalingMode="HighQuality"
-                   Margin="0,0,0,14"/>
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="4"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
 
-            <TextBlock Text="SideBar"
-                       FontSize="24" FontWeight="SemiBold"
-                       Foreground="{DynamicResource TextPrimaryBrush}"
-                       HorizontalAlignment="Center"/>
-
-            <TextBlock Text="Windows 11 Desktop Launcher Toolbar"
-                       FontSize="13"
-                       Foreground="{DynamicResource TextSecondaryBrush}"
-                       HorizontalAlignment="Center"
-                       Margin="0,3,0,10"/>
-
-            <Border Background="{DynamicResource CardBgBrush}"
-                    BorderBrush="{DynamicResource ControlBorderBrush}"
-                    BorderThickness="1"
-                    CornerRadius="12"
-                    Padding="12,4"
-                    HorizontalAlignment="Center">
-                <TextBlock x:Name="VersionText"
-                           FontSize="12"
-                           Foreground="{DynamicResource AccentBrush}"
-                           FontWeight="SemiBold"/>
+            <!-- PhantomCore Cyan-to-Violet Top Accent Strip -->
+            <Border Grid.Row="0" CornerRadius="16,16,0,0">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                        <GradientStop Color="#4CE8FF" Offset="0"/>
+                        <GradientStop Color="#7B88FF" Offset="0.5"/>
+                        <GradientStop Color="#B56BFF" Offset="1"/>
+                    </LinearGradientBrush>
+                </Border.Background>
             </Border>
-        </StackPanel>
 
-        <Button Grid.Row="1"
-                Content="Close"
-                IsCancel="True"
-                IsDefault="True"
-                MinWidth="96"
-                Style="{StaticResource FluentAccentButtonStyle}"
-                HorizontalAlignment="Right"/>
-    </Grid>
+            <!-- Main Content -->
+            <Grid Grid.Row="1" Margin="28,26,28,24">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Hero Brand Section -->
+                <StackPanel Grid.Row="0" HorizontalAlignment="Center">
+                    <Grid Width="108" Height="108" Margin="0,0,0,14">
+                        <!-- Subtle PhantomCore Ambient Halo -->
+                        <Ellipse Width="104" Height="104" Opacity="0.24">
+                            <Ellipse.Fill>
+                                <RadialGradientBrush>
+                                    <GradientStop Color="#60CDFF" Offset="0"/>
+                                    <GradientStop Color="#9B6BFF" Offset="0.55"/>
+                                    <GradientStop Color="#00000000" Offset="1"/>
+                                </RadialGradientBrush>
+                            </Ellipse.Fill>
+                        </Ellipse>
+
+                        <Image x:Name="AppLogoImage"
+                               Width="88" Height="88"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               RenderOptions.BitmapScalingMode="HighQuality"/>
+                    </Grid>
+
+                    <!-- Brand Super-Label -->
+                    <TextBlock Text="PHANTOMCORE"
+                               FontSize="11"
+                               FontWeight="Bold"
+                               HorizontalAlignment="Center"
+                               Margin="0,0,0,2">
+                        <TextBlock.Foreground>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                <GradientStop Color="#4CE8FF" Offset="0"/>
+                                <GradientStop Color="#7B88FF" Offset="0.55"/>
+                                <GradientStop Color="#B56BFF" Offset="1"/>
+                            </LinearGradientBrush>
+                        </TextBlock.Foreground>
+                    </TextBlock>
+
+                    <TextBlock Text="SideBar"
+                               FontSize="28"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextPrimaryBrush}"
+                               HorizontalAlignment="Center"/>
+
+                    <TextBlock Text="Windows 11 Desktop Launcher Toolbar"
+                               FontSize="12.5"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               HorizontalAlignment="Center"
+                               Margin="0,4,0,12"/>
+
+                    <Border Background="{DynamicResource CardBgBrush}"
+                            BorderBrush="{DynamicResource ControlBorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="12"
+                            Padding="12,4"
+                            HorizontalAlignment="Center">
+                        <TextBlock x:Name="VersionText"
+                                   FontSize="11.5"
+                                   Foreground="{DynamicResource AccentBrush}"
+                                   FontWeight="SemiBold"/>
+                    </Border>
+                </StackPanel>
+
+                <!-- Splash Mode: 3-Second Animated Loader -->
+                <StackPanel x:Name="SplashLoaderPanel"
+                            Grid.Row="1"
+                            Margin="0,22,0,0"
+                            Visibility="Collapsed">
+                    <Grid Height="5" ClipToBounds="True">
+                        <Border Background="{DynamicResource ControlHoverBrush}"
+                                CornerRadius="2.5"/>
+                        <Border x:Name="ProgressFill"
+                                HorizontalAlignment="Left"
+                                Width="0"
+                                CornerRadius="2.5">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                    <GradientStop Color="#4CE8FF" Offset="0"/>
+                                    <GradientStop Color="#7B88FF" Offset="0.5"/>
+                                    <GradientStop Color="#B56BFF" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Border.Background>
+                        </Border>
+                    </Grid>
+
+                    <TextBlock x:Name="SplashStatusText"
+                               Text="Initializing PhantomCore SideBar..."
+                               FontSize="11.5"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               HorizontalAlignment="Center"
+                               Margin="0,10,0,0"/>
+                </StackPanel>
+
+                <!-- About Mode: Footer & Close Button -->
+                <Grid x:Name="AboutFooterPanel"
+                      Grid.Row="2"
+                      Margin="0,24,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Grid.Column="0"
+                               Text="PhantomCore Suite"
+                               FontSize="11.5"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               VerticalAlignment="Center"/>
+
+                    <Button Grid.Column="1"
+                            Content="Close"
+                            IsCancel="True"
+                            IsDefault="True"
+                            MinWidth="92"
+                            Style="{StaticResource FluentAccentButtonStyle}"/>
+                </Grid>
+            </Grid>
+        </Grid>
+    </Border>
 </Window>

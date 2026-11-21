@@ -27,7 +27,7 @@ namespace DesktopToolbar
         public bool IsLocked { get; set; } = false;
         public bool AlwaysOnTop { get; set; } = true;
         public bool AutoHideEnabled { get; set; } = true;
-        public string TitleText { get; set; } = "SideBar";
+        public string TitleText { get; set; } = "PhantomCore SideBar";
         public bool ShowTitle { get; set; } = false;
     }
 

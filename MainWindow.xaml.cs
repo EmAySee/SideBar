@@ -221,7 +221,7 @@ namespace DesktopToolbar
             _trayIcon = new WinForms.NotifyIcon
             {
                 Icon = IconService.CreateTrayIcon(),
-                Text = "SideBar Desktop Toolbar",
+                Text = "PhantomCore SideBar",
                 Visible = true
             };
 
@@ -250,9 +250,9 @@ namespace DesktopToolbar
             _trayMenu.Items.Add("Toolbar Settings...", null, (_, _) => ShowSettingsWindow());
             _trayMenu.Items.Add("Reload Config", null, (_, _) => LoadConfiguration());
             _trayMenu.Items.Add("Open Config File", null, (_, _) => OpenConfigFile());
-            _trayMenu.Items.Add("About SideBar...", null, (_, _) => ShowAboutWindow());
+            _trayMenu.Items.Add("About PhantomCore SideBar...", null, (_, _) => ShowAboutWindow());
             _trayMenu.Items.Add(new WinForms.ToolStripSeparator());
-            _trayMenu.Items.Add("Exit SideBar", null, (_, _) => System.Windows.Application.Current.Shutdown());
+            _trayMenu.Items.Add("Exit PhantomCore SideBar", null, (_, _) => System.Windows.Application.Current.Shutdown());
 
             _trayIcon.ContextMenuStrip = _trayMenu;
             _trayIcon.DoubleClick += (_, _) =>

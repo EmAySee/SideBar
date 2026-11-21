@@ -8,6 +8,10 @@
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
     <Version>2.3.0</Version>
+    <Product>PhantomCore SideBar</Product>
+    <Company>PhantomCore</Company>
+    <AssemblyTitle>PhantomCore SideBar</AssemblyTitle>
+    <Description>Windows 11 Fluent Desktop Launcher Toolbar</Description>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
   </PropertyGroup>
 

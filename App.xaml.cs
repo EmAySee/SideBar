@@ -11,7 +11,7 @@ namespace SideBar
         private Mutex? _singleInstanceMutex;
         private bool _ownsMutex;
 
-        protected override void OnStartup(StartupEventArgs e)
+        protected override async void OnStartup(StartupEventArgs e)
         {
             _singleInstanceMutex = new Mutex(true, "SideBar.SingleInstance", out bool createdNew);
             _ownsMutex = createdNew;
@@ -26,10 +26,23 @@ namespace SideBar
 
             base.OnStartup(e);
 
+            ShutdownMode = ShutdownMode.OnMainWindowClose;
             ThemeManager.Initialize();
 
-            MainWindow = new MainWindow();
-            MainWindow.Show();
+            // Initialize MainWindow first so saved theme/config is applied before showing the splash screen
+            var mainWindow = new MainWindow();
+            MainWindow = mainWindow;
+
+            var splash = new AboutWindow(isSplashMode: true)
+            {
+                Icon = mainWindow.Icon
+            };
+            splash.Show();
+
+            await splash.SplashCompletedTask;
+
+            mainWindow.Show();
+            splash.Close();
         }
 
         protected override void OnExit(ExitEventArgs e)
