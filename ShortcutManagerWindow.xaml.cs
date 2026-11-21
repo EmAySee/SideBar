@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Input;
+using DesktopToolbar.Services;
 
 namespace DesktopToolbar
 {
@@ -17,26 +18,16 @@ namespace DesktopToolbar
             Func<Window, string, LauncherItem, bool> editLauncher)
         {
             InitializeComponent();
+            WindowHelper.ApplyWindows11Chrome(this, ThemeManager.IsDarkTheme);
+
             _editLauncher = editLauncher;
 
             foreach (LauncherItem item in launcherItems)
             {
-                _items.Add(Clone(item));
+                _items.Add(item.Clone());
             }
 
             RefreshList(_items.Count > 0 ? _items[0] : null);
-        }
-
-        private static LauncherItem Clone(LauncherItem item)
-        {
-            return new LauncherItem
-            {
-                Label = item.Label,
-                Executable = item.Executable,
-                Arguments = item.Arguments,
-                IconPath = item.IconPath,
-                BuiltInIcon = item.BuiltInIcon
-            };
         }
 
         private void RefreshList(LauncherItem? selectedItem)
@@ -57,25 +48,24 @@ namespace DesktopToolbar
 
             if (ShortcutListBox.SelectedItem is LauncherItem item)
             {
+                SelectedIconImage.Source = item.AppIcon;
                 SelectedLabelText.Text = item.Label;
                 SelectedExecutableText.Text = item.Executable;
+                SelectedArgumentsText.Text = string.IsNullOrWhiteSpace(item.Arguments)
+                    ? ""
+                    : $"Args: {item.Arguments}";
             }
             else
             {
-                SelectedLabelText.Text = "";
+                SelectedIconImage.Source = null;
+                SelectedLabelText.Text = "No shortcut selected";
                 SelectedExecutableText.Text = "";
+                SelectedArgumentsText.Text = "";
             }
         }
 
-        private void MoveUpButton_Click(object sender, RoutedEventArgs e)
-        {
-            MoveSelectedItem(-1);
-        }
-
-        private void MoveDownButton_Click(object sender, RoutedEventArgs e)
-        {
-            MoveSelectedItem(1);
-        }
+        private void MoveUpButton_Click(object sender, RoutedEventArgs e) => MoveSelectedItem(-1);
+        private void MoveDownButton_Click(object sender, RoutedEventArgs e) => MoveSelectedItem(1);
 
         private void MoveSelectedItem(int offset)
         {

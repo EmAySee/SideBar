@@ -1,23 +1,59 @@
 <Window x:Class="DesktopToolbar.AboutWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="About SideBar" Width="360" Height="250"
-        WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
-        WindowStyle="None" AllowsTransparency="True" Background="Transparent">
-    <Border Background="#202020" BorderBrush="#454545" BorderThickness="1" CornerRadius="10" Padding="24">
-        <Grid>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="*"/>
-                <RowDefinition Height="Auto"/>
-            </Grid.RowDefinitions>
+        Title="About SideBar"
+        Width="380"
+        SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        Background="{DynamicResource WindowBgBrush}"
+        Foreground="{DynamicResource TextPrimaryBrush}"
+        FontFamily="{StaticResource FluentFontFamily}">
 
-            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                <TextBlock Text="SideBar" FontSize="32" FontWeight="Bold" Foreground="#60CDFF" HorizontalAlignment="Center"/>
-                <TextBlock Text="Desktop Toolbar" FontSize="16" Foreground="#F3F3F3" HorizontalAlignment="Center" Margin="0,4,0,12"/>
-                <TextBlock x:Name="VersionText" FontSize="12" Foreground="#B8B8B8" HorizontalAlignment="Center"/>
-            </StackPanel>
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
 
-            <Button Grid.Row="1" Content="Close" IsCancel="True" MinWidth="85" Padding="10,6" HorizontalAlignment="Right"/>
-        </Grid>
-    </Border>
+        <StackPanel Grid.Row="0" HorizontalAlignment="Center" Margin="0,4,0,22">
+            <Image x:Name="AppLogoImage"
+                   Width="84" Height="84"
+                   HorizontalAlignment="Center"
+                   RenderOptions.BitmapScalingMode="HighQuality"
+                   Margin="0,0,0,14"/>
+
+            <TextBlock Text="SideBar"
+                       FontSize="24" FontWeight="SemiBold"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       HorizontalAlignment="Center"/>
+
+            <TextBlock Text="Windows 11 Desktop Launcher Toolbar"
+                       FontSize="13"
+                       Foreground="{DynamicResource TextSecondaryBrush}"
+                       HorizontalAlignment="Center"
+                       Margin="0,3,0,10"/>
+
+            <Border Background="{DynamicResource CardBgBrush}"
+                    BorderBrush="{DynamicResource ControlBorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="12"
+                    Padding="12,4"
+                    HorizontalAlignment="Center">
+                <TextBlock x:Name="VersionText"
+                           FontSize="12"
+                           Foreground="{DynamicResource AccentBrush}"
+                           FontWeight="SemiBold"/>
+            </Border>
+        </StackPanel>
+
+        <Button Grid.Row="1"
+                Content="Close"
+                IsCancel="True"
+                IsDefault="True"
+                MinWidth="96"
+                Style="{StaticResource FluentAccentButtonStyle}"
+                HorizontalAlignment="Right"/>
+    </Grid>
 </Window>

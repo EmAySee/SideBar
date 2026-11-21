@@ -1,0 +1,68 @@
+<Window x:Class="DesktopToolbar.Shell32IconPickerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Choose a System Icon (shell32.dll)"
+        Width="660" Height="500"
+        MinWidth="460" MinHeight="340"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResize"
+        ShowInTaskbar="False"
+        Background="{DynamicResource WindowBgBrush}"
+        Foreground="{DynamicResource TextPrimaryBrush}"
+        FontFamily="{StaticResource FluentFontFamily}"
+        Loaded="Window_Loaded">
+
+    <Grid Margin="18">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="0,0,0,12">
+            <TextBlock Text="Windows System Icons" FontSize="18" FontWeight="SemiBold"
+                       Foreground="{DynamicResource TextPrimaryBrush}"/>
+            <TextBlock x:Name="StatusText" Text="Loading icons from shell32.dll..." FontSize="12"
+                       Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,2,0,0"/>
+        </StackPanel>
+
+        <Border Grid.Row="1"
+                Background="{DynamicResource CardBgBrush}"
+                BorderBrush="{DynamicResource ControlBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="6">
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <ItemsControl x:Name="IconsItemsControl">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Button Width="76" Height="74" Margin="4" Padding="4"
+                                    Style="{StaticResource FluentButtonStyle}"
+                                    ToolTip="{Binding ToolTip}"
+                                    Click="IconButton_Click">
+                                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <Image Source="{Binding Image}" Width="32" Height="32"
+                                           RenderOptions.BitmapScalingMode="HighQuality"
+                                           Margin="0,0,0,4"/>
+                                    <TextBlock Text="{Binding Label}" FontSize="11"
+                                               Foreground="{DynamicResource TextSecondaryBrush}"
+                                               HorizontalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Border>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+            <Button Content="Cancel" IsCancel="True" MinWidth="90" Style="{StaticResource FluentButtonStyle}"/>
+        </StackPanel>
+    </Grid>
+</Window>
+
