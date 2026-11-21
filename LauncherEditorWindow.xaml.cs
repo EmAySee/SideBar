@@ -37,6 +37,7 @@ namespace DesktopToolbar
             LabelTextBox.Text = item.Label;
             ExecutableTextBox.Text = item.Executable;
             ArgumentsTextBox.Text = item.Arguments;
+            WorkingDirectoryTextBox.Text = item.WorkingDirectory;
             IconPathTextBox.Text = item.IconPath;
             BuiltInIconComboBox.ItemsSource = iconChoices;
             BuiltInIconComboBox.SelectedValue = LauncherItem.BuiltInIconIndexes.ContainsKey(_selectedBuiltInIcon)
@@ -93,7 +94,28 @@ namespace DesktopToolbar
                 {
                     LabelTextBox.Text = Path.GetFileNameWithoutExtension(ofd.FileName);
                 }
+                if (string.IsNullOrWhiteSpace(WorkingDirectoryTextBox.Text))
+                {
+                    WorkingDirectoryTextBox.Text = Path.GetDirectoryName(ofd.FileName) ?? "";
+                }
                 UpdateIconPreview();
+            }
+        }
+
+        private void BrowseWorkingDirectory_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new Microsoft.Win32.OpenFolderDialog
+            {
+                Title = "Select Start In Folder"
+            };
+            if (!string.IsNullOrWhiteSpace(WorkingDirectoryTextBox.Text) &&
+                Directory.Exists(WorkingDirectoryTextBox.Text))
+            {
+                dialog.InitialDirectory = WorkingDirectoryTextBox.Text;
+            }
+            if (dialog.ShowDialog(this) == true)
+            {
+                WorkingDirectoryTextBox.Text = dialog.FolderName;
             }
         }
 
@@ -151,6 +173,7 @@ namespace DesktopToolbar
                 : LabelTextBox.Text.Trim();
             _item.Executable = ExecutableTextBox.Text.Trim();
             _item.Arguments = ArgumentsTextBox.Text;
+            _item.WorkingDirectory = WorkingDirectoryTextBox.Text.Trim();
             _item.IconPath = IconPathTextBox.Text.Trim();
             _item.BuiltInIcon = _selectedBuiltInIcon;
             _item.ClearIconCache();

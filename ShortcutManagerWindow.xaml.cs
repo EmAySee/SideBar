@@ -54,6 +54,9 @@ namespace DesktopToolbar
                 SelectedArgumentsText.Text = string.IsNullOrWhiteSpace(item.Arguments)
                     ? ""
                     : $"Args: {item.Arguments}";
+                SelectedWorkingDirectoryText.Text = string.IsNullOrWhiteSpace(item.WorkingDirectory)
+                    ? ""
+                    : $"Start in: {item.WorkingDirectory}";
             }
             else
             {
@@ -61,6 +64,7 @@ namespace DesktopToolbar
                 SelectedLabelText.Text = "No shortcut selected";
                 SelectedExecutableText.Text = "";
                 SelectedArgumentsText.Text = "";
+                SelectedWorkingDirectoryText.Text = "";
             }
         }
 

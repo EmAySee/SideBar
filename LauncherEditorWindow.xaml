@@ -77,6 +77,19 @@
                            Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,5"/>
                 <TextBox x:Name="ArgumentsTextBox" Style="{StaticResource FluentTextBoxStyle}" Margin="0,0,0,12"/>
 
+                <TextBlock Text="Start in (Working Directory — optional)" FontSize="12" FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,5"/>
+                <Grid Margin="0,0,0,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox x:Name="WorkingDirectoryTextBox" Style="{StaticResource FluentTextBoxStyle}"
+                             ToolTip="Leave blank to default to the executable's folder"/>
+                    <Button Grid.Column="1" Content="Browse..." Style="{StaticResource FluentButtonStyle}"
+                            Margin="8,0,0,0" Click="BrowseWorkingDirectory_Click"/>
+                </Grid>
+
                 <TextBlock Text="Custom Icon File (.ico / .png — optional)" FontSize="12" FontWeight="SemiBold"
                            Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,5"/>
                 <Grid Margin="0,0,0,12">

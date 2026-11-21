@@ -51,6 +51,7 @@ namespace DesktopToolbar
         public string Label { get; set; } = "";
         public string Executable { get; set; } = "";
         public string Arguments { get; set; } = "";
+        public string WorkingDirectory { get; set; } = "";
         public string IconPath { get; set; } = "";
         public string BuiltInIcon { get; set; } = "";
 
@@ -84,6 +85,7 @@ namespace DesktopToolbar
                 Label = Label,
                 Executable = Executable,
                 Arguments = Arguments,
+                WorkingDirectory = WorkingDirectory,
                 IconPath = IconPath,
                 BuiltInIcon = BuiltInIcon
             };

@@ -114,7 +114,6 @@ namespace DesktopToolbar
                 Interval = TimeSpan.FromMilliseconds(50)
             };
             _hoverCheckTimer.Tick += (_, _) => CheckMouseProximity();
-            _hoverCheckTimer.Start();
 
             _hideDelayTimer = new DispatcherTimer
             {
@@ -123,7 +122,8 @@ namespace DesktopToolbar
             _hideDelayTimer.Tick += (_, _) =>
             {
                 _hideDelayTimer.Stop();
-                if (_isAutoHideEnabled && !_isArrangeMode && _isSnappedToTop && !_isDraggingWindow &&
+                if (IsLoaded && IsVisible &&
+                    _isAutoHideEnabled && !_isArrangeMode && _isSnappedToTop && !_isDraggingWindow &&
                     !IsCursorInRevealZone() && !this.IsMouseOver)
                 {
                     SlideWindow(false);
@@ -133,7 +133,10 @@ namespace DesktopToolbar
 
         private void CheckMouseProximity()
         {
-            if (!_isAutoHideEnabled || !_isSnappedToTop || _isArrangeMode || _isDraggingWindow) return;
+            if (!IsLoaded || !IsVisible || !_isAutoHideEnabled || !_isSnappedToTop || _isArrangeMode || _isDraggingWindow)
+            {
+                return;
+            }
 
             bool isInRevealZone = !_isExpanded && IsCursorInRevealZone();
             bool isOverWindow = this.IsMouseOver;
@@ -182,17 +185,22 @@ namespace DesktopToolbar
 
         private void SlideWindow(bool expand)
         {
-            if (_isExpanded == expand || (!expand && !_isSnappedToTop)) return;
+            if (!IsLoaded || !IsVisible || _isExpanded == expand || (!expand && !_isSnappedToTop)) return;
             _isExpanded = expand;
             RevealTab.Visibility = expand ? Visibility.Collapsed : Visibility.Visible;
             ToolbarSurface.IsHitTestVisible = expand;
 
             UpdateDockedMetrics();
             double targetTop = expand ? _expandedTop : _dockedTop;
+            double fromTop = double.IsNaN(this.Top) || double.IsInfinity(this.Top)
+                ? (expand ? _dockedTop : _expandedTop)
+                : this.Top;
+
             TimeSpan duration = TimeSpan.FromMilliseconds(220);
 
             var slideAnimation = new DoubleAnimation
             {
+                From = fromTop,
                 To = targetTop,
                 Duration = duration,
                 EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
@@ -200,6 +208,7 @@ namespace DesktopToolbar
 
             var surfaceAnimation = new DoubleAnimation
             {
+                From = double.IsNaN(ToolbarSurface.Opacity) ? (expand ? 0 : 1) : ToolbarSurface.Opacity,
                 To = expand ? 1 : 0,
                 Duration = duration,
                 EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
@@ -448,6 +457,7 @@ namespace DesktopToolbar
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
             PositionAtTop();
+            _hoverCheckTimer?.Start();
         }
 
         private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
@@ -623,12 +633,24 @@ namespace DesktopToolbar
             {
                 try
                 {
-                    Process.Start(new ProcessStartInfo
+                    string fileName = Environment.ExpandEnvironmentVariables(item.Executable.Trim());
+                    string workingDir = string.IsNullOrWhiteSpace(item.WorkingDirectory)
+                        ? (File.Exists(fileName) ? Path.GetDirectoryName(fileName) ?? "" : "")
+                        : Environment.ExpandEnvironmentVariables(item.WorkingDirectory.Trim());
+
+                    var startInfo = new ProcessStartInfo
                     {
-                        FileName = item.Executable,
+                        FileName = fileName,
                         Arguments = item.Arguments,
                         UseShellExecute = true
-                    });
+                    };
+
+                    if (!string.IsNullOrWhiteSpace(workingDir) && Directory.Exists(workingDir))
+                    {
+                        startInfo.WorkingDirectory = workingDir;
+                    }
+
+                    Process.Start(startInfo);
                 }
                 catch (Exception ex)
                 {

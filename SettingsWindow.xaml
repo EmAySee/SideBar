@@ -1,7 +1,7 @@
 <Window x:Class="DesktopToolbar.SettingsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="PhantomCore SideBar — Settings"
+        Title="PhantomCore SideBar Settings"
         Width="440"
         SizeToContent="Height"
         WindowStartupLocation="CenterOwner"
